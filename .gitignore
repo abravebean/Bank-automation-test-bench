@@ -2,3 +2,6 @@ node_modules/
 .env
 error-screenshot.png
 *.log
+playwright-report/
+test-results/
+blob-report/

@@ -31,7 +31,11 @@ function withTimeout(promise, ms) {
 }
 
 app.get('/api/tests', (req, res) => {
-  const tests = loadTests().map(({ name, description }) => ({ name, description }));
+  const tests = loadTests().map(({ name, description, engine }) => ({
+    name,
+    description,
+    engine: engine || 'selenium',
+  }));
   res.json(tests);
 });
 

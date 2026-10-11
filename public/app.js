@@ -13,7 +13,7 @@ function renderTests() {
     .map(
       (t) => `
     <div class="test-row" data-name="${t.name}">
-      <div class="test-name">${t.name}</div>
+      <div class="test-name">${t.name} <span class="engine engine-${t.engine}">${t.engine}</span></div>
       <button class="test-run-btn">Run</button>
       <div class="test-desc">${t.description || ''}</div>
       <div class="log-lines"></div>

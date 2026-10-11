@@ -1,18 +1,35 @@
 {
   "name": "bank-login-automation",
   "version": "2.0.0",
-  "description": "Selenium test dashboard for a demo bank login flow.",
+  "description": "Selenium + Playwright test dashboard for a demo bank login flow.",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test:pw": "playwright test",
+    "test:pw:chromium": "playwright test --project=chromium",
+    "test:pw:headed": "playwright test --headed --project=chromium",
+    "test:pw:report": "playwright show-report",
+    "test:pw:install": "playwright install --with-deps"
   },
-  "keywords": ["selenium", "automation", "qa", "dashboard"],
+  "keywords": [
+    "selenium",
+    "playwright",
+    "automation",
+    "qa",
+    "e2e",
+    "page-object-model",
+    "dashboard"
+  ],
   "license": "MIT",
   "dependencies": {
     "express": "^4.21.0",
     "selenium-webdriver": "^4.24.1",
     "chromedriver": "^129.0.0",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "playwright": "^1.48.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0"
   }
 }

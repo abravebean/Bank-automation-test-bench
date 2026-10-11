@@ -8,6 +8,7 @@ const IMPLICIT_WAIT_MS = 10000;
 
 module.exports = {
   name: 'invalid-login-rejected',
+  engine: 'selenium',
   description: 'Confirms an incorrect password shows an error and does not reach the welcome screen.',
   async run(log) {
     if (!BANK_URL) {
