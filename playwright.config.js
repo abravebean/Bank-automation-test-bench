@@ -1,10 +1,15 @@
 // Playwright Test configuration.
-// Run with: npm run test:pw
+//   npm run test:pw    -> UI tests on Chromium, Firefox, WebKit + API tests
+//   npm run test:api   -> API tests only (no browser, no bank credentials needed)
 require('dotenv').config();
 const { defineConfig, devices } = require('@playwright/test');
 
+// The API tests start the dashboard server on its own port so they never
+// collide with a copy you already have running on 3000.
+const API_PORT = process.env.API_TEST_PORT || 3199;
+
 module.exports = defineConfig({
-  testDir: './playwright/specs',
+  testDir: './playwright',
   timeout: 45_000,
   expect: { timeout: 10_000 },
   fullyParallel: true,
@@ -20,16 +25,29 @@ module.exports = defineConfig({
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
   },
+  webServer: {
+    command: 'node server.js',
+    url: `http://localhost:${API_PORT}/api/tests`,
+    env: { PORT: String(API_PORT) },
+    reuseExistingServer: !process.env.CI,
+    timeout: 30_000,
+  },
   projects: [
     {
+      name: 'api',
+      testMatch: 'api/**/*.spec.js',
+      use: { baseURL: `http://localhost:${API_PORT}` },
+    },
+    {
       name: 'chromium',
+      testMatch: 'specs/**/*.spec.js',
       use: {
         ...devices['Desktop Chrome'],
         // Optional: point at a system Chromium (e.g. in Docker) instead of Playwright's download.
         launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined },
       },
     },
-    { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
-    { name: 'webkit', use: { ...devices['Desktop Safari'] } },
+    { name: 'firefox', testMatch: 'specs/**/*.spec.js', use: { ...devices['Desktop Firefox'] } },
+    { name: 'webkit', testMatch: 'specs/**/*.spec.js', use: { ...devices['Desktop Safari'] } },
   ],
 });

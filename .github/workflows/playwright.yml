@@ -1,4 +1,4 @@
-name: Playwright Tests
+name: Tests
 
 on:
   push:
@@ -7,7 +7,42 @@ on:
   workflow_dispatch:
 
 jobs:
+  api:
+    name: API tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CI: 'true'
+      HEADLESS: 'true'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # One API test calls a Playwright dashboard test, so Chromium is needed.
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run API tests
+        run: npx playwright test --project=api
+
+      - name: Upload API test report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-test-report
+          path: playwright-report/
+          retention-days: 14
+
   e2e:
+    name: UI tests (Chromium, Firefox, WebKit)
+    needs: api
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -30,13 +65,13 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
-      - name: Run Playwright tests (Chromium, Firefox, WebKit)
-        run: npx playwright test
+      - name: Run UI tests
+        run: npx playwright test --project=chromium --project=firefox --project=webkit
 
-      - name: Upload HTML report
+      - name: Upload UI test report
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
+          name: ui-test-report
           path: playwright-report/
           retention-days: 14

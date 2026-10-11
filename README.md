@@ -5,12 +5,13 @@
 ![Selenium](https://img.shields.io/badge/Selenium-43B02A?logo=selenium&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-2EAD33?logo=playwright&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
-![Playwright Tests](https://github.com/abravebean/Bank-automation-testing-Selenium/actions/workflows/playwright.yml/badge.svg)
+![Tests](https://github.com/abravebean/Bank-automation-testing-Selenium/actions/workflows/playwright.yml/badge.svg)
 
 An end-to-end test automation suite for a demo bank login flow, built with **both Selenium WebDriver and Playwright**. It has two ways to run:
 
 1. **A web dashboard** (Express + vanilla JS) that runs Selenium and Playwright tests side by side with one click and streams each test's steps live.
 2. **A Playwright Test suite** using the Page Object Model, run cross-browser (Chromium, Firefox, WebKit) locally and in **GitHub Actions CI**, with HTML reports, traces, screenshots, and video on failure.
+3. **API tests** for the dashboard's REST API: status codes, JSON Schema contract validation, NDJSON streaming, and malicious-input handling. They run first in CI.
 
 > ⚠️ This project targets a **demo bank only**. It is not intended for, and should never be pointed at, a real banking site or real account.
 
@@ -27,6 +28,7 @@ An end-to-end test automation suite for a demo bank login flow, built with **bot
 - [Configuration](#configuration)
 - [Using the Dashboard](#using-the-dashboard)
 - [Playwright Test Suite](#playwright-test-suite)
+- [API Tests](#api-tests)
 - [Continuous Integration](#continuous-integration)
 - [Running with Docker](#running-with-docker)
 - [Writing a New Test](#writing-a-new-test)
@@ -43,7 +45,8 @@ An end-to-end test automation suite for a demo bank login flow, built with **bot
 - **Live step logs** — each test streams its steps to the dashboard as it runs (NDJSON over HTTP), then reports pass/fail, message, and duration.
 - **Page Object Model** — Playwright tests interact with the page through `playwright/pages/LoginPage.js`.
 - **Cross-browser** — the Playwright suite runs on Chromium, Firefox, and WebKit.
-- **CI/CD** — GitHub Actions runs the Playwright suite on every push and pull request and uploads the HTML report.
+- **API testing** — Playwright `request` tests validate the dashboard's REST API against JSON Schemas (Ajv), including negative and security-focused cases.
+- **CI/CD** — GitHub Actions runs API tests, then UI tests, on every push and pull request, and uploads both HTML reports.
 - **Failure artifacts** — traces, screenshots, and video are kept automatically when a Playwright test fails.
 - **Auto-discovered tests** — any `*.test.js` file in `/tests` appears in the dashboard automatically. No registration or wiring.
 - **Shared driver and selectors** — one WebDriver builder (`lib/driver.js`), one Playwright launcher (`lib/pw-browser.js`), and one locator map per framework, so a UI change on the bank page is fixed in one place.
@@ -76,6 +79,7 @@ An end-to-end test automation suite for a demo bank login flow, built with **bot
 | --------------- | --------------------------------------------------------------------- |
 | Test automation | [selenium-webdriver](https://www.npmjs.com/package/selenium-webdriver), [Playwright](https://playwright.dev) |
 | Test runner     | [@playwright/test](https://www.npmjs.com/package/@playwright/test)     |
+| API contracts   | [Ajv](https://ajv.js.org) (JSON Schema validation)                    |
 | Browser driver  | [chromedriver](https://www.npmjs.com/package/chromedriver)             |
 | Server / API    | [Express](https://www.npmjs.com/package/express)                       |
 | Configuration   | [dotenv](https://www.npmjs.com/package/dotenv)                         |
@@ -157,8 +161,9 @@ PORT=3000
 Separate from the dashboard, `playwright/specs/` holds a Playwright Test suite built on the Page Object Model.
 
 ```bash
-npm run test:pw            # all browsers: Chromium, Firefox, WebKit
-npm run test:pw:chromium   # Chromium only
+npm run test:pw            # everything: API tests + UI tests on all 3 browsers
+npm run test:pw:chromium   # UI tests on Chromium only
+npm run test:api           # API tests only
 npm run test:pw:headed     # watch it run in a real window
 npm run test:pw:report     # open the last HTML report
 ```
@@ -171,11 +176,34 @@ npm run test:pw:report     # open the last HTML report
 
 Configuration lives in `playwright.config.js`: retries in CI, parallel workers, and trace, screenshot, and video kept only when a test fails. Open a failure's trace with `npx playwright show-trace <path-to-trace.zip>` to step through it action by action.
 
+## API Tests
+
+`playwright/api/dashboard-api.spec.js` tests the dashboard's Express REST API with Playwright's `request` client. Playwright starts the server automatically on port 3199 (`webServer` in `playwright.config.js`), so there's nothing to run first.
+
+```bash
+npm run test:api
+```
+
+| Endpoint                     | What's checked                                                                 |
+| ---------------------------- | ------------------------------------------------------------------------------ |
+| `GET /api/tests`             | 200 status, JSON content type, response matches the JSON Schema contract, every test listed once for both engines, response time under 1s |
+| `POST /api/tests/:name/run`  | Unknown test → 404 with an error body matching its schema                       |
+|                              | Malicious names (path traversal, script injection, SQL-style injection, 500-char input) → 404 |
+|                              | `GET` on the run endpoint is rejected                                           |
+|                              | Streams `application/x-ndjson`; every log event belongs to the test that was run; exactly one result event, last in the stream, matching its schema |
+
+Response schemas live in `playwright/api/schemas.js` and are validated with Ajv, so a change to the API's shape fails the build before it breaks the dashboard.
+
+These tests need no bank credentials, so they pass on every build, including forks and pull requests.
+
 ## Continuous Integration
 
-`.github/workflows/playwright.yml` runs the Playwright suite on Chromium, Firefox, and WebKit on every push and pull request, and uploads the HTML report as a build artifact.
+`.github/workflows/playwright.yml` runs two jobs on every push and pull request:
 
-To enable it, add these repository secrets under **Settings → Secrets and variables → Actions**:
+1. **API tests**: fast, no credentials needed.
+2. **UI tests** on Chromium, Firefox, and WebKit, which run only after the API tests pass.
+
+Each job uploads its HTML report as a build artifact. The UI tests need these repository secrets under **Settings → Secrets and variables → Actions**:
 
 - `BANK_URL`
 - `BANK_USERNAME`
@@ -236,12 +264,15 @@ bank-login-automation/
 ├── playwright/
 │   ├── pages/
 │   │   └── LoginPage.js   # Page Object for the login page
-│   └── specs/
-│       └── login.spec.js  # Playwright Test suite
+│   ├── specs/
+│   │   └── login.spec.js  # UI test suite
+│   └── api/
+│       ├── dashboard-api.spec.js  # API test suite
+│       └── schemas.js     # JSON Schemas for API responses
 ├── docs/
 │   └── demo.gif           # Dashboard demo
 ├── .github/workflows/
-│   └── playwright.yml     # CI pipeline
+│   └── playwright.yml     # CI pipeline: API job → UI job
 ├── public/
 │   ├── index.html         # Dashboard UI
 │   ├── style.css
