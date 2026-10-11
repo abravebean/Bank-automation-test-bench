@@ -43,6 +43,8 @@ module.exports = {
       await driver.wait(until.elementLocated(SELECTORS.postLoginElement), 15000);
       log('Welcome screen found — login succeeded.');
 
+       await driver.sleep(5000);
+       
       log('Logging out...');
       const logoutEl = await driver.findElement(SELECTORS.logoutButton);
       await logoutEl.click();
