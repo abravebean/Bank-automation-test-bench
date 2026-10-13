@@ -17,8 +17,20 @@
       <button id="run-all" class="run-all">Run all tests</button>
     </header>
 
-    <main id="test-list">
-      <p class="loading">Loading tests…</p>
+    <main>
+      <section id="test-list" aria-label="Tests">
+        <p class="loading">Loading tests…</p>
+      </section>
+
+      <section id="history" class="history" hidden>
+        <h2>Recent runs</h2>
+        <table>
+          <thead>
+            <tr><th scope="col">Time</th><th scope="col">Test</th><th scope="col">Result</th><th scope="col">Duration</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
     </main>
   </div>
 

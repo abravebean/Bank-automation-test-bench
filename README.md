@@ -5,13 +5,18 @@
 ![Selenium](https://img.shields.io/badge/Selenium-43B02A?logo=selenium&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-2EAD33?logo=playwright&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
-![Tests](https://github.com/abravebean/Bank-automation-testing-Selenium/actions/workflows/playwright.yml/badge.svg)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white)
+![Tests](https://github.com/abravebean/Bank-automation-test-bench/actions/workflows/playwright.yml/badge.svg)
 
-An end-to-end test automation suite for a demo bank login flow, built with **both Selenium WebDriver and Playwright**. It has two ways to run:
+An end-to-end test automation suite for a demo bank login flow, built with **both Selenium WebDriver and Playwright**. It covers UI, API, database, performance and accessibility testing:
 
 1. **A web dashboard** (Express + vanilla JS) that runs Selenium and Playwright tests side by side with one click and streams each test's steps live.
 2. **A Playwright Test suite** using the Page Object Model, run cross-browser (Chromium, Firefox, WebKit) locally and in **GitHub Actions CI**, with HTML reports, traces, screenshots, and video on failure.
 3. **API tests** for the dashboard's REST API: status codes, JSON Schema contract validation, NDJSON streaming, and malicious-input handling. They run first in CI.
+4. **PostgreSQL run history** with **SQL data-integrity tests** that check the API against the database, the system of record.
+5. **Performance tests** (p50/p95 latency) and **accessibility tests** (axe-core, WCAG 2.1 AA).
+
+The scope, risks and requirement-to-test traceability are documented in the **[Test Plan](TEST_PLAN.md)**.
 
 > ⚠️ This project targets a **demo bank only**. It is not intended for, and should never be pointed at, a real banking site or real account.
 
@@ -29,6 +34,9 @@ An end-to-end test automation suite for a demo bank login flow, built with **bot
 - [Using the Dashboard](#using-the-dashboard)
 - [Playwright Test Suite](#playwright-test-suite)
 - [API Tests](#api-tests)
+- [Run History (PostgreSQL)](#run-history-postgresql)
+- [Performance Tests](#performance-tests)
+- [Accessibility Tests](#accessibility-tests)
 - [Continuous Integration](#continuous-integration)
 - [Running with Docker](#running-with-docker)
 - [Writing a New Test](#writing-a-new-test)
@@ -50,7 +58,11 @@ An end-to-end test automation suite for a demo bank login flow, built with **bot
 - **Failure artifacts** — traces, screenshots, and video are kept automatically when a Playwright test fails.
 - **Auto-discovered tests** — any `*.test.js` file in `/tests` appears in the dashboard automatically. No registration or wiring.
 - **Shared driver and selectors** — one WebDriver builder (`lib/driver.js`), one Playwright launcher (`lib/pw-browser.js`), and one locator map per framework, so a UI change on the bank page is fixed in one place.
-- **Dockerized** — one image runs the dashboard with both engines against the system Chromium.
+- **Run history in PostgreSQL** — every run is saved; `/api/runs` and `/api/stats` report pass rate, average duration, and flag flaky tests, all computed in SQL.
+- **Data-integrity testing** — tests query the database directly with SQL and assert the API returns exactly what's stored.
+- **Performance testing** — p50/p95 latency under sequential and concurrent load, with the numbers attached to the report.
+- **Accessibility testing** — axe-core WCAG 2.1 A/AA scan and a keyboard-only navigation check on the dashboard.
+- **Dockerized** — one image runs the dashboard with both engines against the system Chromium; `docker compose` adds PostgreSQL.
 - **Headless or headed** — toggle with a single env variable: watch the browser locally, run headless on a server.
 - **Config through environment variables** — no credentials in source code.
 
@@ -80,12 +92,14 @@ An end-to-end test automation suite for a demo bank login flow, built with **bot
 | Test automation | [selenium-webdriver](https://www.npmjs.com/package/selenium-webdriver), [Playwright](https://playwright.dev) |
 | Test runner     | [@playwright/test](https://www.npmjs.com/package/@playwright/test)     |
 | API contracts   | [Ajv](https://ajv.js.org) (JSON Schema validation)                    |
+| Database        | PostgreSQL 16, [pg](https://www.npmjs.com/package/pg)                  |
+| Accessibility   | [@axe-core/playwright](https://www.npmjs.com/package/@axe-core/playwright) |
 | Browser driver  | [chromedriver](https://www.npmjs.com/package/chromedriver)             |
 | Server / API    | [Express](https://www.npmjs.com/package/express)                       |
 | Configuration   | [dotenv](https://www.npmjs.com/package/dotenv)                         |
 | Dashboard       | HTML, CSS, vanilla JavaScript                                          |
 | CI/CD           | GitHub Actions                                                         |
-| Containers      | Docker                                                                 |
+| Containers      | Docker, Docker Compose                                                 |
 
 ## Getting Started
 
@@ -98,8 +112,8 @@ An end-to-end test automation suite for a demo bank login flow, built with **bot
 ### Installation
 
 ```bash
-git clone https://github.com/abravebean/Bank-automation-testing-Selenium.git
-cd Bank-automation-testing-Selenium
+git clone https://github.com/abravebean/Bank-automation-test-bench.git
+cd bank-automation-test-bench
 npm install
 npx playwright install --with-deps   # downloads Playwright's browsers
 cp .env.example .env
@@ -132,6 +146,8 @@ PORT=3000
 | `BANK_PASSWORD` | Valid demo password                                                | `demo_pass`                                 |
 | `HEADLESS`      | `true` runs Chrome with no window; `false` shows the browser       | `true`                                      |
 | `PORT`          | Port the dashboard runs on                                         | `3000`                                      |
+| `DATABASE_URL`  | Optional. Enables run history in PostgreSQL                        | `postgres://testbench:testbench@localhost:5432/testbench` |
+| `PERF_P95_BUDGET_MS` | Optional. p95 latency budget for performance tests           | `300`                                       |
 
 > `.env` is git-ignored. Never commit real credentials.
 
@@ -163,7 +179,9 @@ Separate from the dashboard, `playwright/specs/` holds a Playwright Test suite b
 ```bash
 npm run test:pw            # everything: API tests + UI tests on all 3 browsers
 npm run test:pw:chromium   # UI tests on Chromium only
-npm run test:api           # API tests only
+npm run test:api           # API, database and performance tests
+npm run test:a11y          # accessibility tests
+npm run test:ci            # everything that needs no bank credentials
 npm run test:pw:headed     # watch it run in a real window
 npm run test:pw:report     # open the last HTML report
 ```
@@ -196,11 +214,47 @@ Response schemas live in `playwright/api/schemas.js` and are validated with Ajv,
 
 These tests need no bank credentials, so they pass on every build, including forks and pull requests.
 
+## Run History (PostgreSQL)
+
+Set `DATABASE_URL` and every test run is saved to the `test_runs` table (`db/schema.sql`). The dashboard shows the last 10 runs, and two endpoints expose the data:
+
+| Endpoint | Returns |
+| --- | --- |
+| `GET /api/runs?limit=20&test=<name>` | Recent runs, newest first. `limit` must be 1–100, otherwise 400. |
+| `GET /api/stats` | Per test: total runs, passed runs, pass rate, average duration, last run, and a `flaky` flag (has both passed and failed). |
+| `GET /api/health` | `{ status, database: "up" \| "down" \| "disabled" }` |
+
+Without `DATABASE_URL` the dashboard works exactly as before and these endpoints return 503.
+
+```bash
+docker compose up -d db                     # start PostgreSQL
+DATABASE_URL=postgres://testbench:testbench@localhost:5432/testbench npm start
+```
+
+**Data-integrity tests** (`playwright/api/run-history.spec.js`) treat the database as the system of record:
+
+- Run a test through the API, then `SELECT` the saved row by id and compare every field to what was streamed to the user.
+- Seed known rows with SQL, then check `/api/runs` returns the same ids in the same order and `/api/stats` matches a `COUNT(*)` / `AVG()` query, including the flaky flag.
+- Reject bad `limit` values with 400 and prove a SQL-injection payload is treated as plain text (all queries are parameterized).
+- Each run seeds its own uniquely named rows and deletes them afterwards, so tests are independent and safe to run in parallel.
+
+## Performance Tests
+
+`playwright/api/performance.spec.js` sends 50 sequential and 20 concurrent requests to `GET /api/tests`, computes min/p50/p95/max, attaches the numbers to the HTML report, and fails the build if p95 goes over budget (default 300 ms, 3× that under concurrency). Override with `PERF_P95_BUDGET_MS`.
+
+## Accessibility Tests
+
+`playwright/a11y/dashboard-a11y.spec.js` scans the dashboard with axe-core against WCAG 2.1 A/AA and fails on any violation (results attached to the report). A second test tabs through the page with the keyboard and confirms every Run button is reachable and has a unique accessible name, so screen readers say "Run login" instead of just "Run".
+
+```bash
+npm run test:a11y
+```
+
 ## Continuous Integration
 
 `.github/workflows/playwright.yml` runs two jobs on every push and pull request:
 
-1. **API tests**: fast, no credentials needed.
+1. **API, database, performance and accessibility tests**: fast, no credentials needed. A PostgreSQL 16 service container is started for the data-integrity tests.
 2. **UI tests** on Chromium, Firefox, and WebKit, which run only after the API tests pass.
 
 Each job uploads its HTML report as a build artifact. The UI tests need these repository secrets under **Settings → Secrets and variables → Actions**:
@@ -212,6 +266,8 @@ Each job uploads its HTML report as a build artifact. The UI tests need these re
 ## Running with Docker
 
 ```bash
+docker compose up --build        # dashboard + PostgreSQL run history
+# or, without the database:
 docker build -t bank-test-bench .
 docker run -p 3000:3000 --env-file .env bank-test-bench
 ```
@@ -254,6 +310,7 @@ bank-login-automation/
 ├── server.js              # Express API + static file server
 ├── lib/
 │   ├── driver.js          # Shared Selenium WebDriver builder
+│   ├── db.js              # PostgreSQL run history (optional)
 │   ├── pw-browser.js      # Shared Playwright browser launcher
 │   └── selectors.js       # Selenium selectors for the demo bank
 ├── tests/                 # Dashboard tests (auto-discovered)
@@ -266,9 +323,15 @@ bank-login-automation/
 │   │   └── LoginPage.js   # Page Object for the login page
 │   ├── specs/
 │   │   └── login.spec.js  # UI test suite
-│   └── api/
-│       ├── dashboard-api.spec.js  # API test suite
-│       └── schemas.js     # JSON Schemas for API responses
+│   ├── api/
+│   │   ├── dashboard-api.spec.js  # API test suite
+│   │   ├── run-history.spec.js    # API vs. PostgreSQL data-integrity tests
+│   │   ├── performance.spec.js    # Latency percentiles
+│   │   └── schemas.js     # JSON Schemas for API responses
+│   └── a11y/
+│       └── dashboard-a11y.spec.js # axe-core WCAG + keyboard tests
+├── db/
+│   └── schema.sql         # test_runs table
 ├── docs/
 │   └── demo.gif           # Dashboard demo
 ├── .github/workflows/
@@ -279,6 +342,8 @@ bank-login-automation/
 │   └── app.js
 ├── playwright.config.js
 ├── Dockerfile
+├── docker-compose.yml     # app + PostgreSQL
+├── TEST_PLAN.md           # scope, risks, traceability matrix
 ├── package.json
 ├── .env.example
 └── .gitignore

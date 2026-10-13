@@ -167,3 +167,17 @@ h1 {
 
 .engine-selenium { color: #3f5a6b; }
 .engine-playwright { color: #6b4a78; }
+
+/* Recent runs (PostgreSQL history) */
+.history { margin-top: 40px; }
+.history h2 {
+  font-family: "IBM Plex Serif", Georgia, serif;
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 12px;
+}
+.history table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.history th, .history td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--rule); }
+.history th { font-weight: 500; color: var(--muted); }
+.history td.pass { color: var(--stamp-pass); font-weight: 500; }
+.history td.fail { color: var(--stamp-fail); font-weight: 500; }

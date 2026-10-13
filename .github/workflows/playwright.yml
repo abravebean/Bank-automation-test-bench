@@ -8,12 +8,28 @@ on:
 
 jobs:
   api:
-    name: API tests
+    name: API, database, performance & accessibility tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    # Throwaway PostgreSQL for the run-history / data-integrity tests.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: testbench
+          POSTGRES_PASSWORD: testbench
+          POSTGRES_DB: testbench
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U testbench"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     env:
       CI: 'true'
       HEADLESS: 'true'
+      DATABASE_URL: postgres://testbench:testbench@localhost:5432/testbench
     steps:
       - uses: actions/checkout@v4
 
@@ -25,12 +41,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # One API test calls a Playwright dashboard test, so Chromium is needed.
+      # One API test runs a Playwright dashboard test and the a11y tests open the dashboard, so Chromium is needed.
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Run API tests
-        run: npx playwright test --project=api
+      - name: Run API, database, performance & accessibility tests
+        run: npx playwright test --project=api --project=a11y
 
       - name: Upload API test report
         if: ${{ !cancelled() }}

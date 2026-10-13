@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const db = require('./lib/db');
 
 const PORT = process.env.PORT || 3000;
 const TESTS_DIR = path.join(__dirname, 'tests');
@@ -30,6 +31,10 @@ function withTimeout(promise, ms) {
   return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
 }
 
+app.get('/api/health', async (req, res) => {
+  res.json({ status: 'ok', database: await db.ping() });
+});
+
 app.get('/api/tests', (req, res) => {
   const tests = loadTests().map(({ name, description, engine }) => ({
     name,
@@ -37,6 +42,35 @@ app.get('/api/tests', (req, res) => {
     engine: engine || 'selenium',
   }));
   res.json(tests);
+});
+
+// Run history (needs DATABASE_URL). 503 tells the client the feature is off, not broken.
+function requireDb(req, res, next) {
+  if (!db.isEnabled()) {
+    return res.status(503).json({ error: 'Run history is disabled: DATABASE_URL is not set' });
+  }
+  next();
+}
+
+app.get('/api/runs', requireDb, async (req, res) => {
+  const limit = req.query.limit === undefined ? 20 : Number(req.query.limit);
+  if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+    return res.status(400).json({ error: 'limit must be an integer from 1 to 100' });
+  }
+  const testName = typeof req.query.test === 'string' ? req.query.test : undefined;
+  try {
+    res.json(await db.listRuns({ limit, testName }));
+  } catch (err) {
+    res.status(500).json({ error: 'Could not read run history' });
+  }
+});
+
+app.get('/api/stats', requireDb, async (req, res) => {
+  try {
+    res.json(await db.getStats());
+  } catch (err) {
+    res.status(500).json({ error: 'Could not compute stats' });
+  }
 });
 
 function startStream(res) {
@@ -55,24 +89,24 @@ async function runTestStreaming(test, res) {
   const start = Date.now();
   const log = (message) => writeEvent(res, { type: 'log', test: test.name, message });
 
+  let result;
   try {
     const message = await withTimeout(test.run(log), TEST_TIMEOUT_MS);
-    writeEvent(res, {
-      type: 'result',
-      name: test.name,
-      passed: true,
-      message: message || 'Passed',
-      durationMs: Date.now() - start,
-    });
+    result = { name: test.name, passed: true, message: message || 'Passed' };
   } catch (err) {
-    writeEvent(res, {
-      type: 'result',
-      name: test.name,
-      passed: false,
-      message: err.message,
-      durationMs: Date.now() - start,
-    });
+    result = { name: test.name, passed: false, message: err.message };
   }
+  result.durationMs = Date.now() - start;
+
+  // Save to Postgres; a database problem is logged but never fails the test.
+  let runId = null;
+  try {
+    runId = await db.recordRun({ ...result, engine: test.engine || 'selenium' });
+  } catch (err) {
+    console.error('Could not record run:', err.message);
+  }
+
+  writeEvent(res, { type: 'result', ...result, ...(runId ? { runId } : {}) });
 }
 
 app.post('/api/tests/:name/run', async (req, res) => {
@@ -98,6 +132,11 @@ app.post('/api/tests/run-all', async (req, res) => {
   res.end();
 });
 
-app.listen(PORT, () => {
-  console.log(`Test dashboard running at http://localhost:${PORT}`);
-});
+db.init()
+  .then((enabled) => console.log(enabled ? 'Run history: PostgreSQL connected' : 'Run history: disabled (no DATABASE_URL)'))
+  .catch((err) => console.error('Database init failed, continuing without run history:', err.message))
+  .finally(() => {
+    app.listen(PORT, () => {
+      console.log(`Test dashboard running at http://localhost:${PORT}`);
+    });
+  });

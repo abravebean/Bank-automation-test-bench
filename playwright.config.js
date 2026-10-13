@@ -1,6 +1,7 @@
 // Playwright Test configuration.
 //   npm run test:pw    -> UI tests on Chromium, Firefox, WebKit + API tests
-//   npm run test:api   -> API tests only (no browser, no bank credentials needed)
+//   npm run test:api   -> API, data-integrity and performance tests (no bank credentials needed)
+//   npm run test:a11y  -> accessibility tests on the dashboard
 require('dotenv').config();
 const { defineConfig, devices } = require('@playwright/test');
 
@@ -37,6 +38,15 @@ module.exports = defineConfig({
       name: 'api',
       testMatch: 'api/**/*.spec.js',
       use: { baseURL: `http://localhost:${API_PORT}` },
+    },
+    {
+      name: 'a11y',
+      testMatch: 'a11y/**/*.spec.js',
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: `http://localhost:${API_PORT}`,
+        launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined },
+      },
     },
     {
       name: 'chromium',
