@@ -47,3 +47,13 @@ test.describe('Dashboard accessibility', () => {
     }
   });
 });
+
+test.describe('Recorder page accessibility', () => {
+  test('has no WCAG 2.1 A/AA violations before a recording starts', async ({ page }) => {
+    await page.goto('/recorder.html');
+    await expect(page.getByRole('button', { name: 'Start recording' })).toBeVisible();
+    const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
+    const summary = results.violations.map((v) => `${v.id} (${v.impact}): ${v.nodes.length} element(s)`);
+    expect(summary, summary.join('\n')).toEqual([]);
+  });
+});

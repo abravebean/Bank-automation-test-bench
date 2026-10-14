@@ -38,7 +38,7 @@ test.describe('sanitizeRecording', () => {
   test('drops the click before each fill but keeps real clicks', () => {
     expect(code.match(/\.click\(\)/g)).toHaveLength(1); // only the Login button
     expect(code).toContain("getByText('Login', { exact: true }).click()");
-    expect(report).toContain('Removed 2 redundant click(s) before fill()');
+    expect(report).toContain('Removed 2 extra clicks before typing');
   });
 
   test('renames the test, adds a skip guard, and uses CommonJS', () => {
@@ -55,9 +55,9 @@ test.describe('sanitizeRecording', () => {
   test('reports what it changed', () => {
     expect(report).toEqual(
       expect.arrayContaining([
-        expect.stringContaining('BANK_URL'),
-        expect.stringContaining('BANK_USERNAME'),
-        expect.stringContaining('BANK_PASSWORD'),
+        'Moved BANK_URL to .env (1 place)',
+        'Moved BANK_USERNAME to .env (1 place)',
+        'Moved BANK_PASSWORD to .env (1 place)',
       ])
     );
   });

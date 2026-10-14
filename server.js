@@ -2,7 +2,9 @@ require('dotenv').config();
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const { spawn } = require('child_process');
 const db = require('./lib/db');
+const { Recorder, listRecordings, readRecording, deleteRecording, fileFor, recordingsDir, BROWSERS, DEVICES } = require('./lib/recorder');
 
 const PORT = process.env.PORT || 3000;
 const TESTS_DIR = path.join(__dirname, 'tests');
@@ -71,6 +73,141 @@ app.get('/api/stats', requireDb, async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: 'Could not compute stats' });
   }
+});
+
+// ---------------------------------------------------------------------------
+// Recorder: Playwright Codegen driven from the dashboard.
+// These routes start processes and write files, so they only answer requests
+// from this machine. On a public deployment they return 403.
+// ---------------------------------------------------------------------------
+const recorder = new Recorder();
+
+function localOnly(req, res, next) {
+  const ip = req.socket.remoteAddress || '';
+  const isLocal = ip === '127.0.0.1' || ip === '::1' || ip === '::ffff:127.0.0.1';
+  if (process.env.RECORDER_ENABLED === 'false' || !isLocal) {
+    return res.status(403).json({ error: 'The recorder only runs on your own machine (localhost)' });
+  }
+  next();
+}
+
+function sendError(res, err) {
+  res.status(err.status || 500).json({ error: err.message });
+}
+
+app.get('/api/recorder', localOnly, (req, res) => {
+  res.json({
+    ...recorder.snapshot(),
+    defaults: { url: process.env.BANK_URL || '', browsers: BROWSERS, devices: DEVICES.filter(Boolean) },
+  });
+});
+
+// Server-Sent Events: the page gets every change to the recording as it happens.
+app.get('/api/recorder/events', localOnly, (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+  });
+  const send = (snap) => res.write(`data: ${JSON.stringify(snap)}\n\n`);
+  send(recorder.snapshot());
+  recorder.on('update', send);
+  const keepAlive = setInterval(() => res.write(': ping\n\n'), 15000);
+  req.on('close', () => {
+    clearInterval(keepAlive);
+    recorder.off('update', send);
+  });
+});
+
+app.post('/api/recorder/start', localOnly, (req, res) => {
+  const { name, url, browser, device } = req.body || {};
+  try {
+    res.status(201).json(recorder.start({ name, url: url || process.env.BANK_URL, browser, device: device || '' }));
+  } catch (err) {
+    sendError(res, err);
+  }
+});
+
+app.post('/api/recorder/stop', localOnly, (req, res) => {
+  try {
+    recorder.stop();
+    res.status(202).json({ ok: true });
+  } catch (err) {
+    sendError(res, err);
+  }
+});
+
+app.post('/api/recorder/save', localOnly, (req, res) => {
+  try {
+    res.status(201).json(recorder.save(req.body || {}));
+  } catch (err) {
+    sendError(res, err);
+  }
+});
+
+app.post('/api/recorder/discard', localOnly, (req, res) => {
+  recorder.discard();
+  res.json({ ok: true });
+});
+
+app.get('/api/recordings', localOnly, (req, res) => res.json(listRecordings()));
+
+app.get('/api/recordings/:name', localOnly, (req, res) => {
+  try {
+    res.json(readRecording(req.params.name));
+  } catch (err) {
+    sendError(res, err);
+  }
+});
+
+app.delete('/api/recordings/:name', localOnly, (req, res) => {
+  try {
+    deleteRecording(req.params.name);
+    res.status(204).end();
+  } catch (err) {
+    sendError(res, err);
+  }
+});
+
+// Run a saved recording with Playwright Test and stream its output, same format as the dashboard tests.
+app.post('/api/recordings/:name/run', localOnly, (req, res) => {
+  let file;
+  try {
+    file = readRecording(req.params.name) && fileFor(req.params.name);
+  } catch (err) {
+    return sendError(res, err);
+  }
+  const name = req.params.name;
+  startStream(res);
+  const start = Date.now();
+  const child = spawn(
+    'npx',
+    ['playwright', 'test', '-c', path.join(__dirname, 'playwright', 'recorded.config.js'), path.basename(file), '--reporter=list'],
+    { env: { ...process.env, RECORDINGS_DIR: recordingsDir(), FORCE_COLOR: '0' }, shell: process.platform === 'win32' }
+  );
+  let output = '';
+  const onData = (chunk) => {
+    output += chunk;
+    chunk
+      .toString()
+      .split('\n')
+      .map((l) => l.trimEnd())
+      .filter((l) => l.trim())
+      .forEach((message) => writeEvent(res, { type: 'log', test: name, message }));
+  };
+  child.stdout.on('data', onData);
+  child.stderr.on('data', onData);
+  child.on('close', (code) => {
+    const skipped = /\d+ skipped/.test(output) && !/\d+ passed/.test(output);
+    writeEvent(res, {
+      type: 'result',
+      name,
+      passed: code === 0 && !skipped,
+      message: code !== 0 ? 'Failed: see the log above' : skipped ? 'Skipped: BANK_URL is not set' : 'Passed',
+      durationMs: Date.now() - start,
+    });
+    res.end();
+  });
 });
 
 function startStream(res) {

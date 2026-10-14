@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recorder · Test Bench</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@500;600&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="wrap wrap-wide">
+    <header>
+      <nav class="site-nav" aria-label="Main">
+        <a href="/">Tests</a>
+        <a href="/recorder.html" aria-current="page">Recorder</a>
+      </nav>
+      <h1>Recorder</h1>
+      <p class="sub">Click through the bank site and every step is written as Playwright code. Secrets are moved to <code>.env</code> before you save.</p>
+    </header>
+
+    <main>
+      <p id="rec-blocked" class="notice" hidden></p>
+
+      <form id="rec-form" class="rec-form" novalidate>
+        <div class="field">
+          <label for="rec-name">Test name</label>
+          <input id="rec-name" name="name" placeholder="login-happy-path" autocomplete="off" spellcheck="false" required
+                 pattern="[a-z0-9][a-z0-9\-]*" aria-describedby="rec-name-hint">
+          <small id="rec-name-hint">Lowercase letters, numbers and dashes.</small>
+        </div>
+        <div class="field field-url">
+          <label for="rec-url">Start page</label>
+          <input id="rec-url" name="url" type="url" placeholder="https://your-demo-bank.example.com/login" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="rec-browser">Browser</label>
+          <select id="rec-browser" name="browser"></select>
+        </div>
+        <div class="field">
+          <label for="rec-device">Screen</label>
+          <select id="rec-device" name="device"><option value="">Desktop</option></select>
+        </div>
+        <button id="rec-start" class="run-all" type="submit">Start recording</button>
+        <p id="rec-form-error" class="form-error" role="alert"></p>
+      </form>
+
+      <section id="rec-session" class="rec-session" hidden aria-labelledby="rec-title">
+        <div class="rec-bar">
+          <span id="rec-stamp" class="rec-stamp"></span>
+          <h2 id="rec-title" class="rec-title"></h2>
+          <span id="rec-meta" class="rec-meta"></span>
+          <button id="rec-stop" class="btn-ghost" type="button">Stop recording</button>
+        </div>
+        <p id="rec-hint" class="rec-hint"></p>
+
+        <div class="rec-grid">
+          <div class="rec-steps-col">
+            <h3 class="col-title">Steps</h3>
+            <ol id="rec-steps" class="rec-steps" aria-live="polite"></ol>
+            <p id="rec-steps-empty" class="rec-empty">Waiting for your first click…</p>
+          </div>
+
+          <div class="rec-code-col">
+            <div class="code-tabs">
+              <div class="code-tablist" role="tablist" aria-label="Code view">
+                <button id="tab-raw" role="tab" aria-selected="true" aria-controls="code-panel" type="button">As recorded</button>
+                <button id="tab-clean" role="tab" aria-selected="false" aria-controls="code-panel" type="button" disabled>Cleaned</button>
+              </div>
+              <button id="code-edit" class="code-edit" type="button" hidden>Edit</button>
+            </div>
+            <div id="code-panel" class="code-sheet" role="tabpanel" aria-labelledby="tab-raw">
+              <pre id="rec-code" tabindex="0" aria-label="Recorded test code"><code></code></pre>
+              <textarea id="rec-editor" aria-label="Edit test code" spellcheck="false" hidden></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div id="rec-review" class="rec-review" hidden>
+          <ul id="rec-report" class="rec-report"></ul>
+          <div class="rec-actions">
+            <button id="rec-save" class="run-all" type="button">Save test</button>
+            <button id="rec-discard" class="btn-ghost" type="button">Discard</button>
+            <span id="rec-save-msg" class="rec-save-msg" role="status"></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="saved" aria-labelledby="saved-title">
+        <h2 id="saved-title">Saved recordings</h2>
+        <div id="saved-list"><p class="loading">Loading…</p></div>
+      </section>
+    </main>
+  </div>
+
+  <script src="recorder.js"></script>
+</body>
+</html>

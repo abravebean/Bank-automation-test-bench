@@ -13,11 +13,12 @@
     "test:pw:report": "playwright show-report",
     "test:pw:install": "playwright install --with-deps",
     "test:a11y": "playwright test --project=a11y",
-    "test:ci": "playwright test --project=unit --project=api --project=a11y",
+    "test:ci": "playwright test --project=unit --project=api --project=a11y --project=dashboard",
     "db:up": "docker compose up -d db",
     "record": "node scripts/record.js",
     "test:unit": "playwright test --project=unit",
-    "test:recorded": "playwright test --project=recorded"
+    "test:recorded": "playwright test --project=recorded",
+    "test:dashboard": "playwright test --project=dashboard"
   },
   "keywords": [
     "selenium",

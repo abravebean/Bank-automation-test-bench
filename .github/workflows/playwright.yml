@@ -8,7 +8,7 @@ on:
 
 jobs:
   api:
-    name: Unit, API, database, performance & accessibility tests
+    name: Unit, API, database, dashboard & accessibility tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # Throwaway PostgreSQL for the run-history / data-integrity tests.
@@ -45,8 +45,8 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Run unit, API, database, performance & accessibility tests
-        run: npx playwright test --project=unit --project=api --project=a11y
+      - name: Run unit, API, database, dashboard & accessibility tests
+        run: npx playwright test --project=unit --project=api --project=a11y --project=dashboard
 
       - name: Upload API test report
         if: ${{ !cancelled() }}

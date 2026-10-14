@@ -40,7 +40,8 @@ Make sure that a customer can log in and out of the demo bank, that bad credenti
 | Performance | p50 / p95 latency, sequential and concurrent | Playwright `request` | CI, every push |
 | Accessibility | axe-core WCAG 2.1 A/AA scan, keyboard-only navigation | `@axe-core/playwright` | CI, every push |
 | Recorded | New flows captured with Playwright Codegen, then reviewed and cleaned (secrets → env vars) | `npm run record` | Locally, then promoted to the suite |
-| Unit | Helper logic such as the Codegen clean-up | Playwright Test | CI, every push |
+| Unit | Helper logic: Codegen clean-up, code → plain-English steps | Playwright Test | CI, every push |
+| Dashboard UI | Recorder page end to end, with a scripted stand-in for Codegen | Playwright Test, axe-core | CI, every push |
 | Manual / exploratory | New UI changes, visual review of the dashboard | Browser, `HEADLESS=false` | Before a release |
 
 The same login scenarios exist in both Selenium and Playwright so the two frameworks can be compared side by side.
@@ -76,6 +77,8 @@ The same login scenarios exist in both Selenium and Playwright so the two framew
 | R11 | `GET /api/tests` p95 latency stays under budget (default 300 ms) | `api/performance.spec.js` |
 | R12 | Dashboard has no WCAG 2.1 A/AA violations and is keyboard-operable | `a11y/dashboard-a11y.spec.js` |
 | R13 | Recorded tests never contain hard-coded URLs or credentials | `unit/recording.spec.js` |
+| R14 | The Recorder shows each step live, cleans the code, and saves/runs/deletes recordings | `dashboard/recorder.spec.js` |
+| R15 | Recorder input is validated (name, URL, browser, device), only one recording runs at a time, and saved files can't be reached by path traversal | `dashboard/recorder.spec.js` › Recorder API |
 
 ## 6. Test data
 

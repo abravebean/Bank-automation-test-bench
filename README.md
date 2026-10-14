@@ -15,7 +15,7 @@ An end-to-end test automation suite for a demo bank login flow, built with **bot
 3. **API tests** for the dashboard's REST API: status codes, JSON Schema contract validation, NDJSON streaming, and malicious-input handling. They run first in CI.
 4. **PostgreSQL run history** with **SQL data-integrity tests** that check the API against the database, the system of record.
 5. **Performance tests** (p50/p95 latency) and **accessibility tests** (axe-core, WCAG 2.1 AA).
-6. **A test recorder**: `npm run record` captures your clicks as Playwright code with Codegen, then strips out secrets and cleans up the code automatically.
+6. **A test recorder** with its own page in the dashboard: click through the bank site and watch each step appear live as plain English and Playwright code (Codegen). Secrets are moved to `.env` automatically, and you can review, edit, save and run recordings without leaving the browser.
 
 The scope, risks and requirement-to-test traceability are documented in the **[Test Plan](TEST_PLAN.md)**.
 
@@ -257,7 +257,29 @@ npm run test:a11y
 
 ## Recording Tests (Codegen)
 
-Create a test by clicking through the app instead of writing it from scratch:
+### From the dashboard
+
+![Recorder page after a recording, showing plain-English steps and the cleaned code](docs/recorder.png)
+
+Open **Recorder** in the dashboard (`http://localhost:3000/recorder.html`):
+
+1. Enter a test name, the start page (defaults to `BANK_URL`), browser and screen size (desktop, iPhone, Pixel, iPad).
+2. **Start recording.** A browser opens beside the Playwright Inspector. As you click and type, each step appears in the dashboard twice: as a numbered plain-English step ("Fill "input-username" with $BANK_USERNAME") and as live Playwright code. Use the Inspector toolbar to add checks.
+3. Close the browser or press **Stop recording**. The dashboard switches to the **Cleaned** code and lists what changed (secrets moved to `.env`, extra clicks removed). **As recorded** still shows the raw Codegen output for comparison.
+4. **Edit** the code if needed, then **Save test**. Saved recordings are listed below with **Run** (streams the Playwright output live), **View code** and **Delete**.
+
+Updates reach the page over Server-Sent Events (`GET /api/recorder/events`). The recorder routes start processes and write files, so they only answer requests from `localhost`; on a public deployment or inside Docker they return 403 (set `RECORDER_ENABLED=false` to turn them off entirely).
+
+| Endpoint | Purpose |
+| --- | --- |
+| `POST /api/recorder/start` | Start Codegen. 400 on an invalid name, URL, browser or device; 409 if a recording is already running |
+| `GET /api/recorder/events` | Live stream of the recording: state, raw code, cleaned code, steps, clean-up report |
+| `POST /api/recorder/stop` · `/save` · `/discard` | Finish, save (optionally with edited code) or throw away the recording |
+| `GET/DELETE /api/recordings/:name` · `POST …/run` | Read, delete or run a saved recording |
+
+**How it's tested:** the real Codegen window needs a person clicking, so automated tests swap in `playwright/fixtures/fake-codegen.js`, a stand-in that writes Codegen-style output a few lines at a time. `playwright/dashboard/recorder.spec.js` then drives the Recorder page end to end (live steps, clean-up, edit, save, run, delete, stop early, accessibility) and checks the API's validation and error codes. It runs in CI.
+
+### From the command line
 
 ```bash
 npm run record -- transfer-between-accounts
@@ -348,7 +370,9 @@ bank-login-automation/
 ├── lib/
 │   ├── driver.js          # Shared Selenium WebDriver builder
 │   ├── db.js              # PostgreSQL run history (optional)
+│   ├── recorder.js        # Runs Codegen for the Recorder page
 │   ├── recording.js       # Cleans up Codegen recordings
+│   ├── steps.js           # Turns test code into plain-English steps
 │   ├── pw-browser.js      # Shared Playwright browser launcher
 │   └── selectors.js       # Selenium selectors for the demo bank
 ├── tests/                 # Dashboard tests (auto-discovered)
@@ -368,9 +392,15 @@ bank-login-automation/
 │   │   └── schemas.js     # JSON Schemas for API responses
 │   ├── a11y/
 │   │   └── dashboard-a11y.spec.js # axe-core WCAG + keyboard tests
-│   ├── recorded/          # Tests recorded with npm run record
+│   ├── dashboard/
+│   │   └── recorder.spec.js       # Recorder page end-to-end tests
+│   ├── fixtures/
+│   │   └── fake-codegen.js        # Scripted stand-in for Codegen in tests
+│   ├── recorded/          # Saved recordings
+│   ├── recorded.config.js # Config for running saved recordings
 │   └── unit/
-│       └── recording.spec.js      # Unit tests for the Codegen clean-up
+│       ├── recording.spec.js      # Unit tests for the Codegen clean-up
+│       └── steps.spec.js          # Unit tests for code -> plain-English steps
 ├── db/
 │   └── schema.sql         # test_runs table
 ├── scripts/
@@ -381,6 +411,8 @@ bank-login-automation/
 │   └── playwright.yml     # CI pipeline: API job → UI job
 ├── public/
 │   ├── index.html         # Dashboard UI
+│   ├── recorder.html      # Recorder UI
+│   ├── recorder.js
 │   ├── style.css
 │   └── app.js
 ├── playwright.config.js
