@@ -13,8 +13,11 @@
     "test:pw:report": "playwright show-report",
     "test:pw:install": "playwright install --with-deps",
     "test:a11y": "playwright test --project=a11y",
-    "test:ci": "playwright test --project=api --project=a11y",
-    "db:up": "docker compose up -d db"
+    "test:ci": "playwright test --project=unit --project=api --project=a11y",
+    "db:up": "docker compose up -d db",
+    "record": "node scripts/record.js",
+    "test:unit": "playwright test --project=unit",
+    "test:recorded": "playwright test --project=recorded"
   },
   "keywords": [
     "selenium",
@@ -31,7 +34,9 @@
     "accessibility",
     "axe-core",
     "performance-testing",
-    "data-integrity"
+    "data-integrity",
+    "codegen",
+    "test-recorder"
   ],
   "license": "MIT",
   "dependencies": {

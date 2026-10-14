@@ -2,6 +2,7 @@
 //   npm run test:pw    -> UI tests on Chromium, Firefox, WebKit + API tests
 //   npm run test:api   -> API, data-integrity and performance tests (no bank credentials needed)
 //   npm run test:a11y  -> accessibility tests on the dashboard
+//   npm run record -- <name> -> record a new test with Codegen (see scripts/record.js)
 require('dotenv').config();
 const { defineConfig, devices } = require('@playwright/test');
 
@@ -34,6 +35,17 @@ module.exports = defineConfig({
     timeout: 30_000,
   },
   projects: [
+    // Fast unit tests for helper code (no browser, no server needed).
+    { name: 'unit', testMatch: 'unit/**/*.spec.js' },
+    // Tests recorded with `npm run record` (Playwright Codegen).
+    {
+      name: 'recorded',
+      testMatch: 'recorded/**/*.spec.js',
+      use: {
+        ...devices['Desktop Chrome'],
+        launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined },
+      },
+    },
     {
       name: 'api',
       testMatch: 'api/**/*.spec.js',

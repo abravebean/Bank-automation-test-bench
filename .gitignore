@@ -5,3 +5,4 @@ error-screenshot.png
 playwright-report/
 test-results/
 blob-report/
+playwright/recorded/.*.raw.js

@@ -39,6 +39,8 @@ Make sure that a customer can log in and out of the demo bank, that bad credenti
 | Data integrity | API responses compared to direct SQL queries against PostgreSQL | `pg`, SQL | CI with a Postgres service container |
 | Performance | p50 / p95 latency, sequential and concurrent | Playwright `request` | CI, every push |
 | Accessibility | axe-core WCAG 2.1 A/AA scan, keyboard-only navigation | `@axe-core/playwright` | CI, every push |
+| Recorded | New flows captured with Playwright Codegen, then reviewed and cleaned (secrets → env vars) | `npm run record` | Locally, then promoted to the suite |
+| Unit | Helper logic such as the Codegen clean-up | Playwright Test | CI, every push |
 | Manual / exploratory | New UI changes, visual review of the dashboard | Browser, `HEADLESS=false` | Before a release |
 
 The same login scenarios exist in both Selenium and Playwright so the two frameworks can be compared side by side.
@@ -73,6 +75,7 @@ The same login scenarios exist in both Selenium and Playwright so the two framew
 | R10 | Invalid query parameters return 400; SQL injection is harmless | `api/run-history.spec.js` |
 | R11 | `GET /api/tests` p95 latency stays under budget (default 300 ms) | `api/performance.spec.js` |
 | R12 | Dashboard has no WCAG 2.1 A/AA violations and is keyboard-operable | `a11y/dashboard-a11y.spec.js` |
+| R13 | Recorded tests never contain hard-coded URLs or credentials | `unit/recording.spec.js` |
 
 ## 6. Test data
 

@@ -15,6 +15,7 @@ An end-to-end test automation suite for a demo bank login flow, built with **bot
 3. **API tests** for the dashboard's REST API: status codes, JSON Schema contract validation, NDJSON streaming, and malicious-input handling. They run first in CI.
 4. **PostgreSQL run history** with **SQL data-integrity tests** that check the API against the database, the system of record.
 5. **Performance tests** (p50/p95 latency) and **accessibility tests** (axe-core, WCAG 2.1 AA).
+6. **A test recorder**: `npm run record` captures your clicks as Playwright code with Codegen, then strips out secrets and cleans up the code automatically.
 
 The scope, risks and requirement-to-test traceability are documented in the **[Test Plan](TEST_PLAN.md)**.
 
@@ -37,6 +38,7 @@ The scope, risks and requirement-to-test traceability are documented in the **[T
 - [Run History (PostgreSQL)](#run-history-postgresql)
 - [Performance Tests](#performance-tests)
 - [Accessibility Tests](#accessibility-tests)
+- [Recording Tests (Codegen)](#recording-tests-codegen)
 - [Continuous Integration](#continuous-integration)
 - [Running with Docker](#running-with-docker)
 - [Writing a New Test](#writing-a-new-test)
@@ -62,6 +64,7 @@ The scope, risks and requirement-to-test traceability are documented in the **[T
 - **Data-integrity testing** — tests query the database directly with SQL and assert the API returns exactly what's stored.
 - **Performance testing** — p50/p95 latency under sequential and concurrent load, with the numbers attached to the report.
 - **Accessibility testing** — axe-core WCAG 2.1 A/AA scan and a keyboard-only navigation check on the dashboard.
+- **Record-and-clean test creation** — Playwright Codegen records clicks as code; a post-processor moves URLs and credentials into env vars, removes redundant steps and names the test, with unit tests covering it.
 - **Dockerized** — one image runs the dashboard with both engines against the system Chromium; `docker compose` adds PostgreSQL.
 - **Headless or headed** — toggle with a single env variable: watch the browser locally, run headless on a server.
 - **Config through environment variables** — no credentials in source code.
@@ -181,6 +184,8 @@ npm run test:pw            # everything: API tests + UI tests on all 3 browsers
 npm run test:pw:chromium   # UI tests on Chromium only
 npm run test:api           # API, database and performance tests
 npm run test:a11y          # accessibility tests
+npm run test:unit          # unit tests (Codegen clean-up)
+npm run record -- <name>   # record a new test with Codegen
 npm run test:ci            # everything that needs no bank credentials
 npm run test:pw:headed     # watch it run in a real window
 npm run test:pw:report     # open the last HTML report
@@ -250,11 +255,43 @@ DATABASE_URL=postgres://testbench:testbench@localhost:5432/testbench npm start
 npm run test:a11y
 ```
 
+## Recording Tests (Codegen)
+
+Create a test by clicking through the app instead of writing it from scratch:
+
+```bash
+npm run record -- transfer-between-accounts
+npm run record -- mobile-login --device "iPhone 13"   # record on an emulated phone
+```
+
+A browser opens next to the Playwright Inspector. Every click and keystroke is written as Playwright code, and the Inspector toolbar adds assertions (visibility, text, value) by clicking an element. Codegen picks resilient locators: `data-testid` first (configured with `--test-id-attribute`), then roles and accessible names.
+
+Close the browser to finish. `scripts/record.js` then cleans the raw recording with `lib/recording.js`:
+
+| Raw Codegen output | After clean-up |
+| --- | --- |
+| `page.goto('https://demo-bank…')` | `page.goto(process.env.BANK_URL)` |
+| `.fill('demo_user')`, `.fill('<password>')` | `.fill(process.env.BANK_USERNAME)`, `.fill(process.env.BANK_PASSWORD)` |
+| `click()` immediately before every `fill()` | removed (`fill()` already focuses) |
+| `test('test', …)` | `test('transfer-between-accounts', …)` plus a skip when `BANK_URL` isn't set |
+| ES module `import` | CommonJS `require`, like the rest of the project |
+
+It also warns if a credential still appears anywhere in the file. The result lands in `playwright/recorded/` and runs with `npm run test:recorded`.
+
+Recordings are a starting point, not a finished test. Codegen records exactly what it sees, so review for:
+
+- **Volatile values** in assertions, such as timings or dates (`toContainText('FAIL (0.0s)')` breaks on the next run)
+- **Locators that match more than one element** (e.g. `getByRole('status')` when the page has several), which fail Playwright's strict mode
+
+Then move flows you'll keep into the Page Object (see `playwright/recorded/README.md`).
+
+The clean-up logic has its own unit tests (`playwright/unit/recording.spec.js`, `npm run test:unit`) that run in CI.
+
 ## Continuous Integration
 
 `.github/workflows/playwright.yml` runs two jobs on every push and pull request:
 
-1. **API, database, performance and accessibility tests**: fast, no credentials needed. A PostgreSQL 16 service container is started for the data-integrity tests.
+1. **Unit, API, database, performance and accessibility tests**: fast, no credentials needed. A PostgreSQL 16 service container is started for the data-integrity tests.
 2. **UI tests** on Chromium, Firefox, and WebKit, which run only after the API tests pass.
 
 Each job uploads its HTML report as a build artifact. The UI tests need these repository secrets under **Settings → Secrets and variables → Actions**:
@@ -311,6 +348,7 @@ bank-login-automation/
 ├── lib/
 │   ├── driver.js          # Shared Selenium WebDriver builder
 │   ├── db.js              # PostgreSQL run history (optional)
+│   ├── recording.js       # Cleans up Codegen recordings
 │   ├── pw-browser.js      # Shared Playwright browser launcher
 │   └── selectors.js       # Selenium selectors for the demo bank
 ├── tests/                 # Dashboard tests (auto-discovered)
@@ -328,10 +366,15 @@ bank-login-automation/
 │   │   ├── run-history.spec.js    # API vs. PostgreSQL data-integrity tests
 │   │   ├── performance.spec.js    # Latency percentiles
 │   │   └── schemas.js     # JSON Schemas for API responses
-│   └── a11y/
-│       └── dashboard-a11y.spec.js # axe-core WCAG + keyboard tests
+│   ├── a11y/
+│   │   └── dashboard-a11y.spec.js # axe-core WCAG + keyboard tests
+│   ├── recorded/          # Tests recorded with npm run record
+│   └── unit/
+│       └── recording.spec.js      # Unit tests for the Codegen clean-up
 ├── db/
 │   └── schema.sql         # test_runs table
+├── scripts/
+│   └── record.js          # npm run record: Codegen + clean-up
 ├── docs/
 │   └── demo.gif           # Dashboard demo
 ├── .github/workflows/
