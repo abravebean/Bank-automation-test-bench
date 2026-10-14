@@ -14,10 +14,10 @@ function renderTests() {
       (t) => `
     <div class="test-row" data-name="${t.name}">
       <div class="test-name">${t.name} <span class="engine engine-${t.engine}">${t.engine}</span></div>
-      <button class="test-run-btn">Run</button>
+      <button class="test-run-btn" aria-label="Run ${t.name}">Run</button>
       <div class="test-desc">${t.description || ''}</div>
-      <div class="log-lines"></div>
-      <div class="status"></div>
+      <div class="log-lines" aria-live="polite"></div>
+      <div class="status" role="status"></div>
     </div>
   `
     )
@@ -58,6 +58,7 @@ function setResult(result) {
   status.className = `status visible ${result.passed ? 'pass' : 'fail'}`;
   status.textContent = `${icon} (${time}s) — ${result.message}`;
   row.querySelector('.test-run-btn').disabled = false;
+  loadHistory();
 }
 
 async function streamRun(url) {
@@ -102,10 +103,43 @@ async function runAll() {
   }
 }
 
+// Recent runs from PostgreSQL. Hidden when the server has no database (503).
+async function loadHistory() {
+  const section = document.getElementById('history');
+  try {
+    const res = await fetch('/api/runs?limit=10');
+    if (!res.ok) return;
+    const runs = await res.json();
+    section.hidden = false;
+    const body = section.querySelector('tbody');
+    body.innerHTML = '';
+    for (const r of runs) {
+      const tr = document.createElement('tr');
+      const cells = [
+        new Date(r.startedAt).toLocaleTimeString(),
+        r.name,
+        r.passed ? 'PASS' : 'FAIL',
+        `${(r.durationMs / 1000).toFixed(1)}s`,
+      ];
+      cells.forEach((text, i) => {
+        const td = document.createElement('td');
+        td.textContent = text;
+        if (i === 2) td.className = r.passed ? 'pass' : 'fail';
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    }
+    if (!runs.length) body.innerHTML = '<tr><td colspan="4">No runs yet.</td></tr>';
+  } catch {
+    /* history is optional */
+  }
+}
+
 async function init() {
   const res = await fetch('/api/tests');
   tests = await res.json();
   renderTests();
+  loadHistory();
 }
 
 runAllBtn.addEventListener('click', runAll);

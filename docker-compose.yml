@@ -1,0 +1,40 @@
+# Full stack: dashboard + PostgreSQL run history.
+#   docker compose up --build      -> http://localhost:3000
+#   docker compose up -d db        -> just the database, for running tests locally
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: testbench
+      POSTGRES_PASSWORD: testbench
+      POSTGRES_DB: testbench
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U testbench"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://testbench:testbench@db:5432/testbench
+      HEADLESS: "true"
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:

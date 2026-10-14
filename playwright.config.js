@@ -1,6 +1,8 @@
 // Playwright Test configuration.
 //   npm run test:pw    -> UI tests on Chromium, Firefox, WebKit + API tests
-//   npm run test:api   -> API tests only (no browser, no bank credentials needed)
+//   npm run test:api   -> API, data-integrity and performance tests (no bank credentials needed)
+//   npm run test:a11y  -> accessibility tests on the dashboard
+//   npm run record -- <name> -> record a new test with Codegen (see scripts/record.js)
 require('dotenv').config();
 const { defineConfig, devices } = require('@playwright/test');
 
@@ -28,15 +30,53 @@ module.exports = defineConfig({
   webServer: {
     command: 'node server.js',
     url: `http://localhost:${API_PORT}/api/tests`,
-    env: { PORT: String(API_PORT) },
+    env: {
+      ...process.env,
+      PORT: String(API_PORT),
+      // The Recorder tests use a scripted stand-in for the interactive Codegen window,
+      // and save into a temp folder so they never touch playwright/recorded/.
+      RECORDER_FAKE_CODEGEN: require('path').join(__dirname, 'playwright', 'fixtures', 'fake-codegen.js'),
+      FAKE_CODEGEN_STEP_MS: '400',
+      RECORDINGS_DIR: require('path').join(require('os').tmpdir(), `testbench-recordings-${API_PORT}`),
+    },
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,
   },
   projects: [
+    // Fast unit tests for helper code (no browser, no server needed).
+    { name: 'unit', testMatch: 'unit/**/*.spec.js' },
+    // Tests recorded with `npm run record` (Playwright Codegen).
+    {
+      name: 'recorded',
+      testMatch: 'recorded/**/*.spec.js',
+      use: {
+        ...devices['Desktop Chrome'],
+        launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined },
+      },
+    },
     {
       name: 'api',
       testMatch: 'api/**/*.spec.js',
       use: { baseURL: `http://localhost:${API_PORT}` },
+    },
+    {
+      name: 'a11y',
+      testMatch: 'a11y/**/*.spec.js',
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: `http://localhost:${API_PORT}`,
+        launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined },
+      },
+    },
+    {
+      name: 'dashboard',
+      testMatch: 'dashboard/**/*.spec.js',
+      timeout: 90_000,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: `http://localhost:${API_PORT}`,
+        launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined },
+      },
     },
     {
       name: 'chromium',

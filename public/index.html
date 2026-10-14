@@ -12,13 +12,29 @@
 <body>
   <div class="wrap">
     <header>
+      <nav class="site-nav" aria-label="Main">
+        <a href="/" aria-current="page">Tests</a>
+        <a href="/recorder.html">Recorder</a>
+      </nav>
       <h1>Test Bench</h1>
       <p class="sub">Selenium and Playwright checks against the demo bank login.</p>
       <button id="run-all" class="run-all">Run all tests</button>
     </header>
 
-    <main id="test-list">
-      <p class="loading">Loading tests…</p>
+    <main>
+      <section id="test-list" aria-label="Tests">
+        <p class="loading">Loading tests…</p>
+      </section>
+
+      <section id="history" class="history" hidden>
+        <h2>Recent runs</h2>
+        <table>
+          <thead>
+            <tr><th scope="col">Time</th><th scope="col">Test</th><th scope="col">Result</th><th scope="col">Duration</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
     </main>
   </div>
 
