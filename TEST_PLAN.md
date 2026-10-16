@@ -50,40 +50,43 @@ The same login scenarios exist in both Selenium and Playwright so the two framew
 
 | Risk | Impact | Likelihood | Priority | Covered by |
 |---|---|---|---|---|
-| Valid user cannot log in | High | Medium | **P1** | `login.spec.js`, `login.test.js`, `login-playwright.test.js` |
-| Invalid credentials are accepted | High | Low | **P1** | `login.spec.js`, `invalid-login*.test.js` |
-| Password shown in plain text | High | Low | **P1** | `login.spec.js` (password masking) |
-| Injection through API input (path, script, SQL) | High | Medium | **P1** | `dashboard-api.spec.js`, `run-history.spec.js` |
-| Run history disagrees with what actually ran | Medium | Medium | **P2** | `run-history.spec.js` |
+| Valid user cannot log in | High | Medium | **P1** | `login.spec.ts`, `login.test.js`, `login-playwright.test.js` |
+| Invalid credentials are accepted | High | Low | **P1** | `login.spec.ts`, `invalid-login*.test.js` |
+| Password shown in plain text | High | Low | **P1** | `login.spec.ts` (password masking) |
+| Injection through API input (path, script, SQL) | High | Medium | **P1** | `dashboard-api.spec.ts`, `run-history.spec.ts` |
+| Run history disagrees with what actually ran | Medium | Medium | **P2** | `run-history.spec.ts` |
 | API response shape changes and breaks the dashboard | Medium | Medium | **P2** | JSON Schema contract tests |
-| API slows down | Medium | Low | **P2** | `performance.spec.js` |
-| Dashboard unusable with a keyboard or screen reader | Medium | Medium | **P2** | `dashboard-a11y.spec.js` |
+| API slows down | Medium | Low | **P2** | `performance.spec.ts` |
+| Dashboard unusable with a keyboard or screen reader | Medium | Medium | **P2** | `dashboard-a11y.spec.ts` |
 | A browser engine behaves differently | Medium | Low | **P3** | Cross-browser Playwright projects |
 
 ## 5. Traceability matrix
 
-| Req ID | Requirement | Test(s) |
-|---|---|---|
-| R1 | A user with valid credentials reaches the welcome screen and can log out | `specs/login.spec.js` › valid credentials…; `tests/login*.test.js` |
-| R2 | Invalid credentials show an error and never reach the welcome screen | `specs/login.spec.js` › invalid credentials…; `tests/invalid-login*.test.js` |
-| R3 | The password field masks input | `specs/login.spec.js` › password field masks its input |
-| R4 | `GET /api/tests` returns every test once, matching its JSON contract | `api/dashboard-api.spec.js` |
-| R5 | Unknown or malicious test names return 404 and run nothing | `api/dashboard-api.spec.js` |
-| R6 | A test run streams logs, then exactly one result | `api/dashboard-api.spec.js` › streams NDJSON… |
-| R7 | Every run is saved to `test_runs` with the same values the user saw | `api/run-history.spec.js` › running a test writes… |
-| R8 | `/api/runs` and `/api/stats` match the database exactly | `api/run-history.spec.js` |
-| R9 | Flaky tests (mixed pass/fail) are flagged | `api/run-history.spec.js` › stats… flag flaky tests |
-| R10 | Invalid query parameters return 400; SQL injection is harmless | `api/run-history.spec.js` |
-| R11 | `GET /api/tests` p95 latency stays under budget (default 300 ms) | `api/performance.spec.js` |
-| R12 | Dashboard has no WCAG 2.1 A/AA violations and is keyboard-operable | `a11y/dashboard-a11y.spec.js` |
-| R13 | Recorded tests never contain hard-coded URLs or credentials | `unit/recording.spec.js` |
-| R14 | The Recorder shows each step live, cleans the code, and saves/runs/deletes recordings | `dashboard/recorder.spec.js` |
-| R15 | Recorder input is validated (name, URL, browser, device), only one recording runs at a time, and saved files can't be reached by path traversal | `dashboard/recorder.spec.js` › Recorder API |
+The requirement catalog lives in [`compliance/requirements.json`](compliance/requirements.json) (ID, requirement, category, control, risk). Each test is tagged with the requirement it proves (`{ tag: '@R1' }`), and every run generates the traceability matrix and evidence automatically in `compliance-report/index.html`. See the README's *Compliance Evidence Report* section.
+
+| Req ID | Requirement | Control | Test(s) |
+|---|---|---|---|
+| R1 | Valid credentials sign in and sign out | OWASP A07 | `specs/login.spec.ts` |
+| R2 | Invalid credentials are rejected, no session | OWASP A07 | `specs/login.spec.ts` |
+| R3 | Password field masks input | OWASP A07 | `specs/login.spec.ts` |
+| R4 | `GET /api/tests` matches its JSON contract | Interface spec | `api/dashboard-api.spec.ts` |
+| R5 | Unknown or malicious test names return 404 | OWASP A01, A03 | `api/dashboard-api.spec.ts` |
+| R6 | A run streams steps, then exactly one result | Interface spec | `api/dashboard-api.spec.ts` |
+| R7 | Every execution is recorded | Audit trail | `api/run-history.spec.ts` |
+| R8 | API run history reconciles to the database | Data integrity | `api/run-history.spec.ts` |
+| R9 | Flaky tests are flagged | Data quality | `api/run-history.spec.ts` |
+| R10 | Bad parameters return 400; SQL injection has no effect | OWASP A03 | `api/run-history.spec.ts` |
+| R11 | p95 latency within budget | Service level | `api/performance.spec.ts`, `api/dashboard-api.spec.ts` |
+| R12 | WCAG 2.1 AA and keyboard access | WCAG 2.1 AA | `a11y/dashboard-a11y.spec.ts`, `dashboard/recorder.spec.ts` |
+| R13 | No hard-coded URLs or credentials in recordings | CWE-798 | `unit/recording.spec.ts` |
+| R14 | Recorder works end to end | Functional | `dashboard/recorder.spec.ts`, `unit/steps.spec.ts` |
+| R15 | Recorder input validation, no path traversal | OWASP A01, A03 | `dashboard/recorder.spec.ts` |
+| R16 | Multi-factor challenge shown when required | OWASP A07 | **No automated test (known gap; see Scope)** |
 
 ## 6. Test data
 
 - **Login:** credentials come from environment variables / CI secrets, never from source code. Negative tests use obviously fake values.
-- **Database:** `run-history.spec.js` seeds its own rows with a unique test name, asserts against them, and deletes them afterwards, so tests never depend on leftover data and can run in parallel.
+- **Database:** `run-history.spec.ts` seeds its own rows with a unique test name, asserts against them, and deletes them afterwards, so tests never depend on leftover data and can run in parallel.
 
 ## 7. Environments
 
@@ -98,6 +101,7 @@ The same login scenarios exist in both Selenium and Playwright so the two framew
 **Entry:** code builds, `npm ci` succeeds, environment variables set for the suites being run.
 
 **Exit (release-ready):**
+- The compliance report shows no **Failed** requirements, and every P1 requirement is **Passed** (not just "Not run")
 - 100% of P1 tests pass on all three browsers
 - No open WCAG 2.1 A/AA violations
 - API p95 within budget
@@ -108,6 +112,8 @@ The same login scenarios exist in both Selenium and Playwright so the two framew
 Failures in CI keep a Playwright trace, screenshot and video. Each defect is logged with steps to reproduce, expected vs. actual, severity, and the trace link. A retest plus the full regression suite runs before the fix is merged.
 
 ## 10. Reporting
+
+- Compliance evidence report (traceability matrix, step-by-step evidence, screenshots, gaps, SHA-256 hashes), merged across CI jobs and kept 90 days
 
 - HTML report and JUnit XML uploaded as CI artifacts on every run
 - Latency numbers and axe-core results attached to the HTML report

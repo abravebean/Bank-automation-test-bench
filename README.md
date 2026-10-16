@@ -4,6 +4,7 @@
 ![Express](https://img.shields.io/badge/Express-000000?logo=express&logoColor=white)
 ![Selenium](https://img.shields.io/badge/Selenium-43B02A?logo=selenium&logoColor=white)
 ![Playwright](https://img.shields.io/badge/Playwright-2EAD33?logo=playwright&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white)
 ![Tests](https://github.com/abravebean/Bank-automation-test-bench/actions/workflows/playwright.yml/badge.svg)
@@ -17,7 +18,9 @@ An end-to-end test automation suite for a demo bank login flow, built with **bot
 5. **Performance tests** (p50/p95 latency) and **accessibility tests** (axe-core, WCAG 2.1 AA).
 6. **A test recorder** with its own page in the dashboard: click through the bank site and watch each step appear live as plain English and Playwright code (Codegen). Secrets are moved to `.env` automatically, and you can review, edit, save and run recordings without leaving the browser.
 
-The scope, risks and requirement-to-test traceability are documented in the **[Test Plan](TEST_PLAN.md)**.
+7. **A compliance evidence report**: every test is linked to a requirement and a control (OWASP, WCAG, CWE). Each run produces an audit-ready report with the traceability matrix, step-by-step evidence, screenshots, coverage gaps and SHA-256 integrity hashes.
+
+The Playwright suite is written in **TypeScript** (strict mode, type-checked in CI). The scope, risks and test strategy are in the **[Test Plan](TEST_PLAN.md)**.
 
 > ⚠️ This project targets a **demo bank only**. It is not intended for, and should never be pointed at, a real banking site or real account.
 
@@ -38,6 +41,8 @@ The scope, risks and requirement-to-test traceability are documented in the **[T
 - [Run History (PostgreSQL)](#run-history-postgresql)
 - [Performance Tests](#performance-tests)
 - [Accessibility Tests](#accessibility-tests)
+- [Compliance Evidence Report](#compliance-evidence-report)
+- [TypeScript](#typescript)
 - [Recording Tests (Codegen)](#recording-tests-codegen)
 - [Continuous Integration](#continuous-integration)
 - [Running with Docker](#running-with-docker)
@@ -53,7 +58,9 @@ The scope, risks and requirement-to-test traceability are documented in the **[T
 - **Two automation frameworks** — the same login scenarios implemented in Selenium WebDriver and Playwright, labeled by engine in the dashboard for side-by-side comparison.
 - **One-click test runs** — run any test individually, or the full suite with **Run all tests**.
 - **Live step logs** — each test streams its steps to the dashboard as it runs (NDJSON over HTTP), then reports pass/fail, message, and duration.
-- **Page Object Model** — Playwright tests interact with the page through `playwright/pages/LoginPage.js`.
+- **Page Object Model** — Playwright tests interact with the page through a typed Page Object, `playwright/pages/LoginPage.ts`.
+- **TypeScript** — the Playwright suite, Page Object, reporter and configs are TypeScript in strict mode, with typed API responses; `npm run typecheck` runs in CI.
+- **Compliance evidence** — requirement tags on every test feed a custom reporter that builds an audit-ready traceability and evidence report, merged across CI jobs.
 - **Cross-browser** — the Playwright suite runs on Chromium, Firefox, and WebKit.
 - **API testing** — Playwright `request` tests validate the dashboard's REST API against JSON Schemas (Ajv), including negative and security-focused cases.
 - **CI/CD** — GitHub Actions runs API tests, then UI tests, on every push and pull request, and uploads both HTML reports.
@@ -94,6 +101,8 @@ The scope, risks and requirement-to-test traceability are documented in the **[T
 | --------------- | --------------------------------------------------------------------- |
 | Test automation | [selenium-webdriver](https://www.npmjs.com/package/selenium-webdriver), [Playwright](https://playwright.dev) |
 | Test runner     | [@playwright/test](https://www.npmjs.com/package/@playwright/test)     |
+| Language        | TypeScript (strict) for the Playwright suite; [tsx](https://www.npmjs.com/package/tsx) lets the dashboard load the TypeScript Page Object |
+| Reporting       | Playwright HTML, JUnit, and a custom compliance evidence reporter       |
 | API contracts   | [Ajv](https://ajv.js.org) (JSON Schema validation)                    |
 | Database        | PostgreSQL 16, [pg](https://www.npmjs.com/package/pg)                  |
 | Accessibility   | [@axe-core/playwright](https://www.npmjs.com/package/@axe-core/playwright) |
@@ -184,6 +193,8 @@ npm run test:pw            # everything: API tests + UI tests on all 3 browsers
 npm run test:pw:chromium   # UI tests on Chromium only
 npm run test:api           # API, database and performance tests
 npm run test:a11y          # accessibility tests
+npm run test:compliance    # suites that make up the compliance report
+npm run typecheck          # TypeScript type check
 npm run test:unit          # unit tests (Codegen clean-up)
 npm run record -- <name>   # record a new test with Codegen
 npm run test:ci            # everything that needs no bank credentials
@@ -197,11 +208,11 @@ npm run test:pw:report     # open the last HTML report
 | invalid credentials show an error          | Error is visible and non-empty; welcome heading stays hidden.         |
 | password field masks its input             | The password input is `type="password"`.                              |
 
-Configuration lives in `playwright.config.js`: retries in CI, parallel workers, and trace, screenshot, and video kept only when a test fails. Open a failure's trace with `npx playwright show-trace <path-to-trace.zip>` to step through it action by action.
+Configuration lives in `playwright.config.ts`: retries in CI, parallel workers, and trace, screenshot, and video kept only when a test fails. Open a failure's trace with `npx playwright show-trace <path-to-trace.zip>` to step through it action by action.
 
 ## API Tests
 
-`playwright/api/dashboard-api.spec.js` tests the dashboard's Express REST API with Playwright's `request` client. Playwright starts the server automatically on port 3199 (`webServer` in `playwright.config.js`), so there's nothing to run first.
+`playwright/api/dashboard-api.spec.ts` tests the dashboard's Express REST API with Playwright's `request` client. Playwright starts the server automatically on port 3199 (`webServer` in `playwright.config.ts`), so there's nothing to run first.
 
 ```bash
 npm run test:api
@@ -215,7 +226,7 @@ npm run test:api
 |                              | `GET` on the run endpoint is rejected                                           |
 |                              | Streams `application/x-ndjson`; every log event belongs to the test that was run; exactly one result event, last in the stream, matching its schema |
 
-Response schemas live in `playwright/api/schemas.js` and are validated with Ajv, so a change to the API's shape fails the build before it breaks the dashboard.
+Response schemas live in `playwright/api/schemas.ts` and are validated with Ajv, so a change to the API's shape fails the build before it breaks the dashboard.
 
 These tests need no bank credentials, so they pass on every build, including forks and pull requests.
 
@@ -236,7 +247,7 @@ docker compose up -d db                     # start PostgreSQL
 DATABASE_URL=postgres://testbench:testbench@localhost:5432/testbench npm start
 ```
 
-**Data-integrity tests** (`playwright/api/run-history.spec.js`) treat the database as the system of record:
+**Data-integrity tests** (`playwright/api/run-history.spec.ts`) treat the database as the system of record:
 
 - Run a test through the API, then `SELECT` the saved row by id and compare every field to what was streamed to the user.
 - Seed known rows with SQL, then check `/api/runs` returns the same ids in the same order and `/api/stats` matches a `COUNT(*)` / `AVG()` query, including the flaky flag.
@@ -245,15 +256,73 @@ DATABASE_URL=postgres://testbench:testbench@localhost:5432/testbench npm start
 
 ## Performance Tests
 
-`playwright/api/performance.spec.js` sends 50 sequential and 20 concurrent requests to `GET /api/tests`, computes min/p50/p95/max, attaches the numbers to the HTML report, and fails the build if p95 goes over budget (default 300 ms, 3× that under concurrency). Override with `PERF_P95_BUDGET_MS`.
+`playwright/api/performance.spec.ts` sends 50 sequential and 20 concurrent requests to `GET /api/tests`, computes min/p50/p95/max, attaches the numbers to the HTML report, and fails the build if p95 goes over budget (default 300 ms, 3× that under concurrency). Override with `PERF_P95_BUDGET_MS`.
 
 ## Accessibility Tests
 
-`playwright/a11y/dashboard-a11y.spec.js` scans the dashboard with axe-core against WCAG 2.1 A/AA and fails on any violation (results attached to the report). A second test tabs through the page with the keyboard and confirms every Run button is reachable and has a unique accessible name, so screen readers say "Run login" instead of just "Run".
+`playwright/a11y/dashboard-a11y.spec.ts` scans the dashboard with axe-core against WCAG 2.1 A/AA and fails on any violation (results attached to the report). A second test tabs through the page with the keyboard and confirms every Run button is reachable and has a unique accessible name, so screen readers say "Run login" instead of just "Run".
 
 ```bash
 npm run test:a11y
 ```
+
+## Compliance Evidence Report
+
+Every Playwright test is tagged with the requirement it proves, and every requirement maps to a control:
+
+```ts
+test('invalid credentials show an error and stay on the login page', { tag: '@R2' }, async ({ page }, testInfo) => {
+  await test.step('Submit a fake username and wrong password', async () => { /* ... */ });
+  await test.step('An error is shown and no session starts', async () => {
+    await expect(loginPage.errorMessage).toBeVisible();
+    await captureEvidence(page, testInfo, 'Error shown for invalid credentials');
+  });
+});
+```
+
+The requirement catalog in [`compliance/requirements.json`](compliance/requirements.json) is the source of truth: ID, requirement, category, control (e.g. *OWASP Top 10 A07: Identification and Authentication Failures*, *WCAG 2.1 Level AA*, *CWE-798: Use of Hard-coded Credentials*) and risk (P1–P3).
+
+![Compliance evidence report: summary, run details and traceability matrix](docs/compliance-report.png)
+
+A custom reporter, `playwright/reporters/compliance-reporter.ts`, turns each run into an evidence package in `compliance-report/`:
+
+| File | Contents |
+| --- | --- |
+| `index.html` | The report: run details (commit, branch, CI run, browsers, target host), a traceability matrix, gaps and exceptions, evidence for every requirement (each test, its steps, outcome per browser, screenshots), integrity hashes and a sign-off block. Prints cleanly to PDF. |
+| `evidence.json` | The same data, machine-readable |
+| `evidence.json.sha256` | Hash of `evidence.json`; check it with `sha256sum -c evidence.json.sha256` |
+| `evidence/` | Screenshots, each named by its SHA-256 hash, so any edit after the run is detectable |
+| `summary.md` | Short summary, posted to the GitHub Actions run page |
+
+Each requirement gets one of four statuses:
+
+| Status | Meaning |
+| --- | --- |
+| Passed | At least one linked test passed and none failed |
+| Failed | A linked test failed (the error and a failure screenshot are included) |
+| Not run | Every linked test was skipped; the reason is shown (e.g. `BANK_URL is not set`) |
+| No tests | No test is linked: a coverage gap (R16, multi-factor authentication, is a known one) |
+
+The report also flags tests that **passed only on retry** and tests **not linked to any requirement**, the first things an auditor asks about.
+
+```bash
+npm run test:compliance        # runs the suites that make up the report
+```
+
+Then open **Compliance report** in the dashboard, or `compliance-report/index.html` directly. Every Playwright run writes a report, so partial runs show the requirements they didn't cover as "No tests".
+
+**In CI**, the API job and the cross-browser UI job each save raw results (Playwright blob reports). A third job merges them with `npx playwright merge-reports --config merge.config.ts`, so one report covers every requirement and browser. It runs even when tests fail, posts the summary table to the run page, and keeps the report as a build artifact for 90 days.
+
+## TypeScript
+
+The Playwright suite (specs, Page Object, reporter, helpers and configs) is TypeScript in strict mode. Playwright runs `.ts` files directly, so there is no build step: `npm run typecheck` only checks types, and runs first in CI.
+
+- `playwright/support/api-types.ts` types every API response, mirroring the JSON Schemas in `playwright/api/schemas.ts`: the schemas check responses at runtime, the types check the test code at compile time.
+- `playwright/support/schema.ts` and `playwright/support/evidence.ts` hold shared helpers (schema assertions, NDJSON parsing, screenshot evidence, environment variables).
+- Recordings are saved as `.spec.ts` (Codegen's output is valid TypeScript). Older `.spec.js` recordings still load and run.
+- The Express server and the dashboard tests in `/tests` stay JavaScript; the server registers [tsx](https://www.npmjs.com/package/tsx) so they can use the TypeScript Page Object.
+
+Strict mode caught real issues during the conversion: the login tests passed a possibly-undefined `BANK_URL` to `page.goto()`, and a data-integrity test read a lookup result without checking it existed.
 
 ## Recording Tests (Codegen)
 
@@ -277,7 +346,7 @@ Updates reach the page over Server-Sent Events (`GET /api/recorder/events`). The
 | `POST /api/recorder/stop` · `/save` · `/discard` | Finish, save (optionally with edited code) or throw away the recording |
 | `GET/DELETE /api/recordings/:name` · `POST …/run` | Read, delete or run a saved recording |
 
-**How it's tested:** the real Codegen window needs a person clicking, so automated tests swap in `playwright/fixtures/fake-codegen.js`, a stand-in that writes Codegen-style output a few lines at a time. `playwright/dashboard/recorder.spec.js` then drives the Recorder page end to end (live steps, clean-up, edit, save, run, delete, stop early, accessibility) and checks the API's validation and error codes. It runs in CI.
+**How it's tested:** the real Codegen window needs a person clicking, so automated tests swap in `playwright/fixtures/fake-codegen.js`, a stand-in that writes Codegen-style output a few lines at a time. `playwright/dashboard/recorder.spec.ts` then drives the Recorder page end to end (live steps, clean-up, edit, save, run, delete, stop early, accessibility) and checks the API's validation and error codes. It runs in CI.
 
 ### From the command line
 
@@ -307,7 +376,7 @@ Recordings are a starting point, not a finished test. Codegen records exactly wh
 
 Then move flows you'll keep into the Page Object (see `playwright/recorded/README.md`).
 
-The clean-up logic has its own unit tests (`playwright/unit/recording.spec.js`, `npm run test:unit`) that run in CI.
+The clean-up logic has its own unit tests (`playwright/unit/recording.spec.ts`, `npm run test:unit`) that run in CI.
 
 ## Continuous Integration
 
@@ -344,7 +413,7 @@ module.exports = {
   description: 'What this test checks.',
   async run(log) {
     // Selenium:   lib/driver.js + lib/selectors.js
-    // Playwright: lib/pw-browser.js + playwright/pages/LoginPage.js
+    // Playwright: lib/pw-browser.js + playwright/pages/LoginPage.ts
     // Call log('...') to stream a step to the dashboard
 
     // Success → return a string describing what passed
@@ -358,7 +427,7 @@ Restart the server and the test appears in the dashboard.
 **Conventions**
 
 - **One behavior per test.** Small, focused tests make failures easy to diagnose.
-- **Locators live in one place.** `lib/selectors.js` for Selenium, `LoginPage.js` for Playwright. Never hard-code them inside a test.
+- **Locators live in one place.** `lib/selectors.js` for Selenium, `LoginPage.ts` for Playwright. Never hard-code them inside a test.
 - **Fail loudly and specifically.** `throw new Error('Expected dashboard heading, got login page')` is far more useful than `throw new Error('failed')`.
 - **Always clean up.** Quit the driver or close the browser in a `finally` block so failed tests don't leave Chrome processes running.
 
@@ -382,25 +451,31 @@ bank-login-automation/
 │   └── invalid-login-playwright.test.js
 ├── playwright/
 │   ├── pages/
-│   │   └── LoginPage.js   # Page Object for the login page
+│   │   └── LoginPage.ts   # Typed Page Object for the login page
+│   ├── reporters/
+│   │   └── compliance-reporter.ts # Builds the compliance evidence report
+│   ├── support/
+│   │   ├── api-types.ts   # Types for API responses
+│   │   ├── evidence.ts    # Screenshot evidence + env helpers
+│   │   └── schema.ts      # Schema assertions, NDJSON parsing
 │   ├── specs/
-│   │   └── login.spec.js  # UI test suite
+│   │   └── login.spec.ts  # UI test suite
 │   ├── api/
-│   │   ├── dashboard-api.spec.js  # API test suite
-│   │   ├── run-history.spec.js    # API vs. PostgreSQL data-integrity tests
-│   │   ├── performance.spec.js    # Latency percentiles
-│   │   └── schemas.js     # JSON Schemas for API responses
+│   │   ├── dashboard-api.spec.ts  # API test suite
+│   │   ├── run-history.spec.ts    # API vs. PostgreSQL data-integrity tests
+│   │   ├── performance.spec.ts    # Latency percentiles
+│   │   └── schemas.ts     # JSON Schemas for API responses
 │   ├── a11y/
-│   │   └── dashboard-a11y.spec.js # axe-core WCAG + keyboard tests
+│   │   └── dashboard-a11y.spec.ts # axe-core WCAG + keyboard tests
 │   ├── dashboard/
-│   │   └── recorder.spec.js       # Recorder page end-to-end tests
+│   │   └── recorder.spec.ts       # Recorder page end-to-end tests
 │   ├── fixtures/
 │   │   └── fake-codegen.js        # Scripted stand-in for Codegen in tests
 │   ├── recorded/          # Saved recordings
-│   ├── recorded.config.js # Config for running saved recordings
+│   ├── recorded.config.ts # Config for running saved recordings
 │   └── unit/
-│       ├── recording.spec.js      # Unit tests for the Codegen clean-up
-│       └── steps.spec.js          # Unit tests for code -> plain-English steps
+│       ├── recording.spec.ts      # Unit tests for the Codegen clean-up
+│       └── steps.spec.ts          # Unit tests for code -> plain-English steps
 ├── db/
 │   └── schema.sql         # test_runs table
 ├── scripts/
@@ -415,7 +490,11 @@ bank-login-automation/
 │   ├── recorder.js
 │   ├── style.css
 │   └── app.js
-├── playwright.config.js
+├── compliance/
+│   └── requirements.json  # Requirement catalog: IDs, controls, risk
+├── playwright.config.ts
+├── merge.config.ts        # Merges CI jobs into one report
+├── tsconfig.json
 ├── Dockerfile
 ├── docker-compose.yml     # app + PostgreSQL
 ├── TEST_PLAN.md           # scope, risks, traceability matrix

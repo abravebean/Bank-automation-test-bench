@@ -1,0 +1,22 @@
+{
+  // Type-checks the Playwright suite (specs, page objects, reporters, configs).
+  // Playwright runs .ts files directly, so nothing is compiled: `npm run typecheck` only checks.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "lib": ["ES2022", "DOM"],
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "allowJs": true,
+    "checkJs": false,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "noUnusedLocals": true,
+    "types": ["node"]
+  },
+  "include": ["playwright/**/*.ts", "playwright.config.ts", "merge.config.ts"],
+  "exclude": ["node_modules", "playwright/recorded/**"]
+}
