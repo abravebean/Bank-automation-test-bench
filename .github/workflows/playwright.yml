@@ -28,6 +28,7 @@ jobs:
           --health-retries 10
     env:
       CI: 'true'
+      CI_JOB_ID: api
       HEADLESS: 'true'
       DATABASE_URL: postgres://testbench:testbench@localhost:5432/testbench
     steps:
@@ -40,6 +41,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Type-check the test suite
+        run: npm run typecheck
 
       # One API test runs a Playwright dashboard test and the a11y tests open the dashboard, so Chromium is needed.
       - name: Install Chromium
@@ -56,6 +60,14 @@ jobs:
           path: playwright-report/
           retention-days: 14
 
+      - name: Upload raw results for the compliance report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: blob-report-api
+          path: blob-report/
+          retention-days: 1
+
   e2e:
     name: UI tests (Chromium, Firefox, WebKit)
     needs: api
@@ -67,6 +79,7 @@ jobs:
       BANK_PASSWORD: ${{ secrets.BANK_PASSWORD }}
       HEADLESS: 'true'
       CI: 'true'
+      CI_JOB_ID: e2e
     steps:
       - uses: actions/checkout@v4
 
@@ -89,5 +102,61 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ui-test-report
+          path: playwright-report/
+          retention-days: 14
+
+      - name: Upload raw results for the compliance report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: blob-report-e2e
+          path: blob-report/
+          retention-days: 1
+
+  compliance:
+    name: Compliance evidence report
+    # Runs even when tests fail: failures are exactly what the report must record.
+    if: ${{ !cancelled() }}
+    needs: [api, e2e]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      # Only the host is printed in the report, never the full URL or any credentials.
+      BANK_URL: ${{ secrets.BANK_URL }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download raw results from both test jobs
+        uses: actions/download-artifact@v4
+        with:
+          pattern: blob-report-*
+          path: all-blob-reports
+          merge-multiple: true
+
+      - name: Merge into one HTML report and one compliance report
+        run: npx playwright merge-reports --config merge.config.ts ./all-blob-reports
+
+      - name: Post the compliance summary to this run's page
+        run: cat compliance-report/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload compliance report
+        uses: actions/upload-artifact@v4
+        with:
+          name: compliance-report
+          path: compliance-report/
+          retention-days: 90
+
+      - name: Upload merged test report
+        uses: actions/upload-artifact@v4
+        with:
+          name: merged-test-report
           path: playwright-report/
           retention-days: 14

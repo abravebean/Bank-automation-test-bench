@@ -2,14 +2,16 @@
 // The real Codegen window needs a person clicking, so the server runs with
 // RECORDER_FAKE_CODEGEN (playwright/fixtures/fake-codegen.js): a stand-in that writes
 // Codegen-style output a few lines at a time, exactly like a live recording.
-const { test, expect } = require('@playwright/test');
-const { AxeBuilder } = require('@axe-core/playwright');
+import { test, expect } from '@playwright/test';
+import { AxeBuilder } from '@axe-core/playwright';
+import type { RecordingSummary } from '../support/api-types';
+import { captureEvidence } from '../support/evidence';
 
 // The recorder handles one recording at a time, so these tests must not overlap.
 test.describe.configure({ mode: 'serial' });
 
 const FAKE_URL = 'https://demo-bank.example.com/login';
-const unique = (base) => `${base}-${Date.now().toString(36)}`;
+const unique = (base: string): string => `${base}-${Date.now().toString(36)}`;
 
 test.beforeEach(async ({ request }) => {
   await request.post('/api/recorder/discard');
@@ -17,14 +19,14 @@ test.beforeEach(async ({ request }) => {
 
 test.afterAll(async ({ request }) => {
   // Remove anything these tests saved.
-  const list = await (await request.get('/api/recordings')).json();
+  const list: RecordingSummary[] = await (await request.get('/api/recordings')).json();
   for (const r of list.filter((r) => /^(ui|api)-/.test(r.name))) {
     await request.delete(`/api/recordings/${r.name}`);
   }
 });
 
 test.describe('Recorder page', () => {
-  test('records live, shows the clean-up, saves, runs and deletes a test', async ({ page }) => {
+  test('records live, shows the clean-up, saves, runs and deletes a test', { tag: '@R14' }, async ({ page }, testInfo) => {
     const name = unique('ui-invalid-login');
     await page.goto('/recorder.html');
 
@@ -52,6 +54,7 @@ test.describe('Recorder page', () => {
     await expect(page.locator('#rec-code')).not.toContainText(FAKE_URL);
     await expect(page.locator('#rec-report')).toContainText('Moved BANK_URL to .env (1 place)');
     await expect(page.locator('#rec-report')).toContainText('Removed 1 extra click before typing');
+    await captureEvidence(page, testInfo, 'Cleaned recording: secrets moved to .env');
 
     // The raw tab still shows exactly what Codegen wrote.
     await page.getByRole('tab', { name: 'As recorded' }).click();
@@ -83,7 +86,7 @@ test.describe('Recorder page', () => {
     await expect(item).toBeHidden();
   });
 
-  test('Stop ends a recording early and keeps what was captured', async ({ page }) => {
+  test('Stop ends a recording early and keeps what was captured', { tag: '@R14' }, async ({ page }) => {
     await page.goto('/recorder.html');
     await page.getByLabel('Test name').fill(unique('ui-stopped'));
     await page.getByLabel('Start page').fill(FAKE_URL);
@@ -102,7 +105,7 @@ test.describe('Recorder page', () => {
     await expect(page.getByLabel('Test name')).toBeEnabled();
   });
 
-  test('explains what to fix when the name is invalid', async ({ page }) => {
+  test('explains what to fix when the name is invalid', { tag: ['@R14', '@R15'] }, async ({ page }) => {
     await page.goto('/recorder.html');
     await page.getByLabel('Test name').fill('My Test!');
     await page.getByRole('button', { name: 'Start recording' }).click();
@@ -110,7 +113,7 @@ test.describe('Recorder page', () => {
     await expect(page.locator('#rec-session')).toBeHidden();
   });
 
-  test('finished recording view has no WCAG 2.1 A/AA violations', async ({ page }) => {
+  test('finished recording view has no WCAG 2.1 A/AA violations', { tag: ['@R12', '@R14'] }, async ({ page }) => {
     await page.goto('/recorder.html');
     await page.getByLabel('Test name').fill(unique('ui-a11y'));
     await page.getByLabel('Start page').fill(FAKE_URL);
@@ -123,7 +126,7 @@ test.describe('Recorder page', () => {
   });
 });
 
-test.describe('Recorder API', () => {
+test.describe('Recorder API', { tag: '@R15' }, () => {
   test('rejects bad input with 400 and a reason', async ({ request }) => {
     const bad = [
       { name: '../../server', url: FAKE_URL },

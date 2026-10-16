@@ -1,10 +1,12 @@
 require('dotenv').config();
+// Lets the dashboard tests in /tests load the TypeScript Page Object (playwright/pages/LoginPage.ts).
+require('tsx/cjs');
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 const db = require('./lib/db');
-const { Recorder, listRecordings, readRecording, deleteRecording, fileFor, recordingsDir, BROWSERS, DEVICES } = require('./lib/recorder');
+const { Recorder, listRecordings, readRecording, deleteRecording, existingFileFor, recordingsDir, BROWSERS, DEVICES } = require('./lib/recorder');
 
 const PORT = process.env.PORT || 3000;
 const TESTS_DIR = path.join(__dirname, 'tests');
@@ -12,6 +14,18 @@ const TEST_TIMEOUT_MS = 45000;
 
 const app = express();
 app.use(express.static(path.join(__dirname, 'public')));
+
+// Latest compliance evidence report (created by any Playwright run: npm run test:compliance).
+const COMPLIANCE_DIR = path.join(__dirname, 'compliance-report');
+app.use('/compliance', express.static(COMPLIANCE_DIR));
+app.get('/compliance', (req, res) => {
+  res.status(404).type('html').send(`<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1"><title>Compliance report · Test Bench</title>
+    <link rel="stylesheet" href="/style.css"></head><body><div class="wrap"><header>
+    <nav class="site-nav" aria-label="Main"><a href="/">Tests</a><a href="/recorder.html">Recorder</a>
+    <a href="/compliance/" aria-current="page">Compliance report</a></nav><h1>Compliance report</h1></header>
+    <main><p>No report yet. Run <code>npm run test:compliance</code>, then reload this page.</p></main></div></body></html>`);
+});
 app.use(express.json());
 
 function loadTests() {
@@ -173,7 +187,7 @@ app.delete('/api/recordings/:name', localOnly, (req, res) => {
 app.post('/api/recordings/:name/run', localOnly, (req, res) => {
   let file;
   try {
-    file = readRecording(req.params.name) && fileFor(req.params.name);
+    file = readRecording(req.params.name) && existingFileFor(req.params.name);
   } catch (err) {
     return sendError(res, err);
   }
@@ -182,7 +196,7 @@ app.post('/api/recordings/:name/run', localOnly, (req, res) => {
   const start = Date.now();
   const child = spawn(
     'npx',
-    ['playwright', 'test', '-c', path.join(__dirname, 'playwright', 'recorded.config.js'), path.basename(file), '--reporter=list'],
+    ['playwright', 'test', '-c', path.join(__dirname, 'playwright', 'recorded.config.ts'), path.basename(file), '--reporter=list'],
     { env: { ...process.env, RECORDINGS_DIR: recordingsDir(), FORCE_COLOR: '0' }, shell: process.platform === 'win32' }
   );
   let output = '';

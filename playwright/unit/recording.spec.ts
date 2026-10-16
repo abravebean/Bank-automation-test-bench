@@ -1,6 +1,6 @@
 // Unit tests for the Codegen clean-up step (lib/recording.js). No browser needed.
-const { test, expect } = require('@playwright/test');
-const { sanitizeRecording, findLeftoverSecrets } = require('../../lib/recording');
+import { test, expect } from '@playwright/test';
+import { sanitizeRecording, findLeftoverSecrets } from '../../lib/recording';
 
 const env = {
   BANK_URL: 'https://demo-bank.example.com/login',
@@ -22,7 +22,7 @@ test('test', async ({ page }) => {
 });
 `;
 
-test.describe('sanitizeRecording', () => {
+test.describe('sanitizeRecording', { tag: '@R13' }, () => {
   const { code, report } = sanitizeRecording(RAW, { name: 'login-happy-path', env });
 
   test('removes every hard-coded secret and URL', () => {
@@ -41,11 +41,11 @@ test.describe('sanitizeRecording', () => {
     expect(report).toContain('Removed 2 extra clicks before typing');
   });
 
-  test('renames the test, adds a skip guard, and uses CommonJS', () => {
+  test('renames the test, adds a skip guard, and keeps the TypeScript import', () => {
     expect(code).toContain("test('login-happy-path', async ({ page }) => {");
     expect(code).toContain("test.skip(!process.env.BANK_URL, 'BANK_URL is not set');");
-    expect(code).toContain("const { test, expect } = require('@playwright/test');");
-    expect(code).not.toMatch(/^import /m);
+    expect(code).toContain("import { test, expect } from '@playwright/test';");
+    expect(code).not.toContain('require(');
   });
 
   test('keeps the assertions recorded in the Inspector', () => {
@@ -63,7 +63,7 @@ test.describe('sanitizeRecording', () => {
   });
 });
 
-test('does not replace short values that could match unrelated strings', () => {
+test('does not replace short values that could match unrelated strings', { tag: '@R13' }, () => {
   const { code } = sanitizeRecording(
     "test('test', async ({ page }) => {\n  await page.getByText('ab').click();\n});\n",
     { name: 'x-test', env: { BANK_USERNAME: 'ab' } }
@@ -71,6 +71,6 @@ test('does not replace short values that could match unrelated strings', () => {
   expect(code).toContain("getByText('ab')");
 });
 
-test('flags a secret that survived in an unexpected form', () => {
+test('flags a secret that survived in an unexpected form', { tag: '@R13' }, () => {
   expect(findLeftoverSecrets('await page.keyboard.type("demo_user")', env)).toEqual(['BANK_USERNAME']);
 });

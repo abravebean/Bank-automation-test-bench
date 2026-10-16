@@ -6,7 +6,7 @@
 // Opens a browser plus the Playwright Inspector. Every click and keystroke is
 // written as Playwright code. Close the browser to finish; the recording is then
 // cleaned up (secrets -> env vars, redundant clicks removed, test renamed) and
-// saved to playwright/recorded/<test-name>.spec.js.
+// saved to playwright/recorded/<test-name>.spec.ts.
 require('dotenv').config();
 const { spawnSync } = require('child_process');
 const fs = require('fs');
@@ -41,7 +41,7 @@ if (!args.url) {
 }
 
 const outDir = path.join(__dirname, '..', 'playwright', 'recorded');
-const outFile = path.join(outDir, `${args.name}.spec.js`);
+const outFile = path.join(outDir, `${args.name}.spec.ts`);
 const rawFile = path.join(outDir, `.${args.name}.raw.js`);
 
 if (fs.existsSync(outFile) && !args.force) {
@@ -80,4 +80,4 @@ const leftovers = findLeftoverSecrets(code, process.env);
 if (leftovers.length) {
   console.warn(`\n⚠ ${leftovers.join(', ')} still appears in the file. Check it before committing.`);
 }
-console.log(`\nRun it:  npx playwright test playwright/recorded/${args.name}.spec.js --project=recorded --headed\n`);
+console.log(`\nRun it:  npx playwright test playwright/recorded/${args.name}.spec.ts --project=recorded --headed\n`);
