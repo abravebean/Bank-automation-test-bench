@@ -8,6 +8,8 @@ export interface TestListItem {
   name: string;
   description: string;
   engine: Engine;
+  /** Group shown on the dashboard, e.g. "Login" or "Banking". */
+  area: string;
 }
 
 export interface LogEvent {

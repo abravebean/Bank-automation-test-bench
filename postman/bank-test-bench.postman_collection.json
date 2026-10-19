@@ -58,7 +58,7 @@
                   "  pm.response.to.have.status(200);",
                   "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json/);",
                   "});",
-                  "pm.test('matches the test-list contract', () => pm.response.to.have.jsonSchema({\n    type: 'array', minItems: 1,\n    items: { type: 'object', required: ['name', 'description', 'engine'], additionalProperties: false,\n      properties: { name: { type: 'string', minLength: 1 }, description: { type: 'string' }, engine: { enum: ['selenium', 'playwright'] } } }\n}));",
+                  "pm.test('matches the test-list contract', () => pm.response.to.have.jsonSchema({\n    type: 'array', minItems: 1,\n    items: { type: 'object', required: ['name', 'description', 'engine', 'area'], additionalProperties: false,\n      properties: { name: { type: 'string', minLength: 1 }, description: { type: 'string' }, engine: { enum: ['selenium', 'playwright'] }, area: { type: 'string', minLength: 1 } } }\n}));",
                   "const catalog = pm.response.json();",
                   "pm.test('every test is listed exactly once', () => {",
                   "  const names = catalog.map((t) => t.name);",

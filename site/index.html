@@ -78,6 +78,10 @@
     .counts strong { display: block; font: 600 26px/1.1 "IBM Plex Serif", Georgia, serif; }
     .counts span { font-size: 13px; color: var(--muted); }
 
+    .shot { margin: 14px 0 22px; }
+    .shot img { display: block; width: 100%; height: auto; border: 1px solid var(--rule); background: #fff; }
+    .shot figcaption { margin-top: 6px; font-size: 13px; color: var(--muted); }
+
     .stack { columns: 2; column-gap: 32px; padding-left: 18px; margin: 10px 0 0; font-size: 15px; }
     .stack li { break-inside: avoid; padding: 2px 0; }
 
@@ -115,6 +119,16 @@
         <div><strong id="c-notests">–</strong><span>without tests</span></div>
       </div>
 
+      <h2>See it running</h2>
+      <p class="section-note">The dashboard running a bank transfer test, the Ledgerline demo bank, and the Recorder turning clicks into a clean test.</p>
+      <figure class="shot">
+        <img src="demo.gif" width="880" height="576" alt="The Test Bench dashboard runs a transfer test and shows it passing, then the Ledgerline demo bank's accounts page, then the Recorder turning clicks into Playwright code with the URL and username moved to environment variables.">
+      </figure>
+      <figure class="shot">
+        <img src="demo-bank.png" width="1100" height="760" loading="lazy" alt="Ledgerline demo bank: sign-in page, accounts overview, a transfer receipt and an account's transaction history.">
+        <figcaption>Ledgerline, the fictional demo bank under test: sign-in, accounts, a transfer receipt and transaction history.</figcaption>
+      </figure>
+
       <h2>Reports</h2>
       <ul class="reports">
         <li>
@@ -148,8 +162,11 @@
       </ul>
 
       <h2>What's being tested</h2>
-      <p class="section-note">A demo bank login flow and the tooling that tests it.</p>
+      <p class="section-note">Ledgerline, a fictional demo bank with accounts and transfers, and the tooling that tests it.</p>
       <ul class="stack">
+        <li>Banking rules: boundary values, daily limits, overdraft protection</li>
+        <li>Security: cross-account access (IDOR), lockout, session cookies</li>
+        <li>Ledger integrity and race conditions (no double spending)</li>
         <li>Playwright (TypeScript) and Selenium UI tests on Chromium, Firefox and WebKit</li>
         <li>BDD scenarios in Gherkin</li>
         <li>REST API contract tests with JSON Schema</li>

@@ -8,12 +8,13 @@ const testListSchema = {
   minItems: 1,
   items: {
     type: 'object',
-    required: ['name', 'description', 'engine'],
+    required: ['name', 'description', 'engine', 'area'],
     additionalProperties: false,
     properties: {
       name: { type: 'string', minLength: 1 },
       description: { type: 'string' },
       engine: { enum: ['selenium', 'playwright'] },
+      area: { type: 'string', minLength: 1 },
     },
   },
 };

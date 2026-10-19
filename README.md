@@ -12,28 +12,65 @@
 ![AWS](https://img.shields.io/badge/AWS-CDK-232F3E?logo=amazonwebservices&logoColor=white)
 ![Tests](https://github.com/abravebean/Bank-automation-test-bench/actions/workflows/playwright.yml/badge.svg)
 
-**[Live test results →](https://abravebean.github.io/Bank-automation-test-bench/)** rebuilt by CI on every push to main: compliance evidence, API and security reports.
+A QA automation portfolio project: **Ledgerline**, a fictional demo bank with accounts and transfers, tested at every layer (UI, API, database, security, accessibility, performance), with audit-ready compliance evidence generated on every commit.
 
-An end-to-end test automation suite for a demo bank login flow, built with **both Selenium WebDriver and Playwright**. It covers UI, API, database, performance and accessibility testing:
+**[▶ Live test results](https://abravebean.github.io/Bank-automation-test-bench/)**: rebuilt by CI on every push to `main`.
 
-1. **A web dashboard** (Express + vanilla JS) that runs Selenium and Playwright tests side by side with one click and streams each test's steps live.
-2. **A Playwright Test suite** using the Page Object Model, run cross-browser (Chromium, Firefox, WebKit) locally and in **GitHub Actions CI**, with HTML reports, traces, screenshots, and video on failure.
-3. **API tests** for the dashboard's REST API: status codes, JSON Schema contract validation, NDJSON streaming, and malicious-input handling. They run first in CI.
-4. **PostgreSQL run history** with **SQL data-integrity tests** that check the API against the database, the system of record.
-5. **Performance tests** (p50/p95 latency) and **accessibility tests** (axe-core, WCAG 2.1 AA).
-6. **A test recorder** with its own page in the dashboard: click through the bank site and watch each step appear live as plain English and Playwright code (Codegen). Secrets are moved to `.env` automatically, and you can review, edit, save and run recordings without leaving the browser.
+![Dashboard running a test, then the Recorder turning clicks into code and moving secrets to .env](docs/demo.gif)
 
-7. **A compliance evidence report**: every test is linked to a requirement and a control (OWASP, WCAG, CWE). Each run produces an audit-ready report with the traceability matrix, step-by-step evidence, screenshots, coverage gaps and SHA-256 integrity hashes.
+## At a glance
 
-8. **Postman collections** run with **Newman**: chained API requests with test scripts, plus a data-driven security collection fed by a CSV of attack payloads.
-9. **BDD scenarios** in Gherkin (`Given / When / Then`) for the login flow and the Recorder, with Cucumber-style step definitions on the Page Objects.
-10. **AWS deployment** as code (CDK, TypeScript): Fargate behind a load balancer, private RDS PostgreSQL, Secrets Manager, with infrastructure tests and post-deploy smoke tests.
+| | |
+| --- | --- |
+| **Automated checks** | 139 Playwright tests (145 runs across Chromium, Firefox and WebKit), 60 Postman assertions, 13 infrastructure tests |
+| **Test types** | UI end-to-end, BDD (Gherkin), REST API contracts, business rules (boundary values, equivalence partitions), SQL data integrity, ledger reconciliation, security (IDOR, lockout, injection, session cookies), race conditions, accessibility (WCAG 2.1 AA), performance (p95), infrastructure |
+| **Traceability** | 24 requirements, each mapped to a control (OWASP Top 10, WCAG, CWE) and linked to the tests that prove it |
+| **CI/CD** | GitHub Actions, 6 jobs on every push: tests, Docker build, infrastructure checks, merged compliance report, publish to Pages |
+| **Stack** | TypeScript, JavaScript, Playwright, Selenium, Postman/Newman, PostgreSQL, Docker, AWS CDK |
 
-The Playwright suite is written in **TypeScript** (strict mode, type-checked in CI). The scope, risks and test strategy are in the **[Test Plan](TEST_PLAN.md)**.
+## Where to look first
+
+| If you want to see… | Open |
+| --- | --- |
+| Requirements traced to tests, with evidence | [Live compliance report](https://abravebean.github.io/Bank-automation-test-bench/compliance/) · [`compliance/requirements.json`](compliance/requirements.json) |
+| Test strategy and risk-based priorities | [`TEST_PLAN.md`](TEST_PLAN.md) |
+| Banking business rules, IDOR, race conditions | [`playwright/bank/bank-api.spec.ts`](playwright/bank/bank-api.spec.ts) |
+| Boundary values as a BDD Scenario Outline | [`features/transfer.feature`](features/transfer.feature) |
+| Page Object Model in TypeScript | [`playwright/pages/bank/`](playwright/pages/bank/) · [`playwright/bank/bank-ui.spec.ts`](playwright/bank/bank-ui.spec.ts) |
+| API tested against the database with SQL | [`playwright/api/run-history.spec.ts`](playwright/api/run-history.spec.ts) |
+| Data-driven security tests | [`postman/data/malicious-names.csv`](postman/data/malicious-names.csv) |
+| The CI pipeline | [`.github/workflows/playwright.yml`](.github/workflows/playwright.yml) |
+
+## Bugs this project caught
+
+Tests are only useful if they find problems. These were found while building the suite, and each one is now covered by a test or a check:
+
+| Found by | Problem | Fix |
+| --- | --- | --- |
+| Accessibility test (keyboard) | Every per-test button was labeled just "Run", so a screen reader heard "Run, Run, Run" | Unique labels ("Run login") |
+| Accessibility test (axe-core) | An Edit button sat inside a tab list, which breaks screen-reader navigation | Moved outside the tab list |
+| Accessibility test (axe-core) | The code panel scrolled but couldn't be reached with a keyboard | Made focusable |
+| Postman collection | Unknown `/api` routes returned an HTML error page instead of JSON | JSON 404 for all unknown API routes |
+| TypeScript strict mode | Login tests could pass an undefined `BANK_URL` to `page.goto()` | Explicit checks and skips |
+| Security review | No `.dockerignore`, so `docker build` would copy `.env` (bank credentials) into the image | `.dockerignore`, non-root container |
+| Security review | Typed passwords appeared in step titles of the public compliance report | Secrets redacted before writing, with unit tests |
+| Test review | Listing tests (`--list`) overwrote the compliance report with "not run" | Report is only written when tests actually ran |
 
 > ⚠️ This project targets a **demo bank only**. It is not intended for, and should never be pointed at, a real banking site or real account.
 
-![Dashboard running the test suite](docs/demo.gif)
+## What's inside
+
+0. **Ledgerline, a fictional demo bank** built into the project as the system under test: sign-in with lockout, accounts, transfers with business rules, transaction history.
+1. **A web dashboard** (Express + vanilla JS) that runs Selenium and Playwright tests side by side with one click and streams each test's steps live.
+2. **A Playwright Test suite** in TypeScript using the Page Object Model, run cross-browser in **GitHub Actions**, with HTML reports, traces, screenshots and video on failure.
+3. **API tests** for the dashboard's REST API: status codes, JSON Schema contracts, NDJSON streaming, malicious input.
+4. **PostgreSQL run history** with **SQL data-integrity tests** that check the API against the database, the system of record.
+5. **Performance tests** (p50/p95 latency) and **accessibility tests** (axe-core, WCAG 2.1 AA).
+6. **A test recorder** in the dashboard: click through the bank site and each step appears live as plain English and Playwright code (Codegen). Secrets are moved to `.env` automatically.
+7. **A compliance evidence report**: requirements → controls → tests → steps → screenshots, with coverage gaps and SHA-256 integrity hashes.
+8. **Postman collections** run with **Newman**: chained requests plus a data-driven security collection.
+9. **BDD scenarios** in Gherkin with Cucumber-style step definitions on the Page Objects.
+10. **AWS infrastructure as code** (CDK, TypeScript) with its own tests, validated in CI (not kept running, to avoid cost).
 
 ---
 
@@ -50,6 +87,7 @@ The Playwright suite is written in **TypeScript** (strict mode, type-checked in 
 - [Run History (PostgreSQL)](#run-history-postgresql)
 - [Performance Tests](#performance-tests)
 - [Accessibility Tests](#accessibility-tests)
+- [Ledgerline Demo Bank](#ledgerline-demo-bank)
 - [Compliance Evidence Report](#compliance-evidence-report)
 - [BDD Scenarios (Gherkin)](#bdd-scenarios-gherkin)
 - [Postman Collections (Newman)](#postman-collections-newman)
@@ -168,7 +206,7 @@ PORT=3000
 
 | Variable        | Description                                                        | Example                                     |
 | --------------- | ------------------------------------------------------------------ | ------------------------------------------- |
-| `BANK_URL`      | Login page URL of the demo bank under test                         | `https://your-demo-bank.example.com/login`  |
+| `BANK_URL`      | Login page of the bank under test. Optional: defaults to the built-in Ledgerline bank | `https://your-demo-bank.example.com/login`  |
 | `BANK_USERNAME` | Valid demo username, used by the happy-path login test             | `demo_user`                                 |
 | `BANK_PASSWORD` | Valid demo password                                                | `demo_pass`                                 |
 | `HEADLESS`      | `true` runs Chrome with no window; `false` shows the browser       | `true`                                      |
@@ -182,22 +220,29 @@ PORT=3000
 
 ## Using the Dashboard
 
-- Every test in `/tests` is listed with its name, an engine badge (**Selenium** or **Playwright**), its description, and a **Run** button.
-- **Run all tests** at the top executes the full suite.
-- After each run, the result appears next to the test:
-  - each step, streamed live as the test runs
-  - ✅ / ❌ pass or fail
-  - the message returned (or the error thrown)
-  - how long the test took
+![Dashboard: summary row, tests grouped by area, run history marks, and a live transfer test](docs/demo.gif)
+
+- **Summary row:** number of tests, how many pass on their latest run, the overall pass rate and any flaky tests (a test that has both passed and failed). Pass rate and flakiness come from PostgreSQL run history.
+- **Tests grouped by area** (Login, Banking), each with an engine tag (**Selenium** or **Playwright**), its description, and a **Run** button.
+- **Run history per test:** the last 10 runs as ✓/✗ marks (oldest first, hover for time and duration), plus pass rate and average duration.
+- **Run all tests** shows a progress bar; tests waiting their turn say *Queued* until they start.
+- **Engine filter:** show all tests, only Selenium, or only Playwright.
+- While a test runs, each step streams in live; the result is stamped ✓ PASS / ✗ FAIL with the message and duration.
+
+Without `DATABASE_URL`, everything works except the pass-rate, flaky and history parts, which say how to turn them on.
 
 ### Included tests
 
-| File                               | Engine     | What it checks                                         |
-| ---------------------------------- | ---------- | ------------------------------------------------------ |
-| `login.test.js`                    | Selenium   | A user with valid credentials can log in and log out.  |
-| `invalid-login.test.js`            | Selenium   | Invalid credentials show an error.                     |
-| `login-playwright.test.js`         | Playwright | A user with valid credentials can log in and log out.  |
-| `invalid-login-playwright.test.js` | Playwright | Invalid credentials show an error and no welcome page. |
+| File | Area | Engine | What it checks |
+| --- | --- | --- | --- |
+| `login.test.js` | Login | Selenium | A user with valid credentials can log in and log out. |
+| `invalid-login.test.js` | Login | Selenium | Invalid credentials show an error. |
+| `login-playwright.test.js` | Login | Playwright | A user with valid credentials can log in and log out. |
+| `invalid-login-playwright.test.js` | Login | Playwright | Invalid credentials show an error and no welcome page. |
+| `transfer-playwright.test.js` | Banking | Playwright | A $10.00 transfer shows a receipt and both balances change by exactly $10.00. |
+| `overdraft-blocked-playwright.test.js` | Banking | Playwright | A transfer larger than the balance is refused and nothing moves. |
+
+Banking tests always run against the built-in Ledgerline bank; Login tests use `BANK_URL` (Ledgerline when it isn't set). Each test exports an `area`, which the dashboard groups by and `GET /api/tests` returns as part of its JSON contract.
 
 ## Playwright Test Suite
 
@@ -210,6 +255,7 @@ npm run test:api           # API, database and performance tests
 npm run test:a11y          # accessibility tests
 npm run test:compliance    # suites that make up the compliance report
 npm run test:bdd           # BDD scenarios (Gherkin)
+npm run test:bank          # Ledgerline demo bank: API, UI and BDD
 npm run test:postman       # Postman collections with Newman
 npm run typecheck          # TypeScript type check
 npm run test:unit          # unit tests (Codegen clean-up)
@@ -283,6 +329,44 @@ DATABASE_URL=postgres://testbench:testbench@localhost:5432/testbench npm start
 npm run test:a11y
 ```
 
+## Ledgerline Demo Bank
+
+![Ledgerline: sign-in, accounts, transfer receipt and transaction history](docs/demo-bank.png)
+
+A small fictional bank, built into the server at `http://localhost:3000/bank/`, so the suite has a real product to test: sign-in, accounts, transfers and history. Sign in as `demo_user` / `demo_pass`. The login pages use the same element IDs as the original demo bank, so every login test runs against it, and it's the default whenever `BANK_URL` isn't set.
+
+**Business rules under test**
+
+| Rule | How it's tested |
+| --- | --- |
+| Amounts: more than $0.00, up to two decimals, numbers only | Equivalence partitions and boundary values (`0`, `0.01`, `1.234`, `-5`, `1e2`, …) in unit, API, UI and BDD tests |
+| Can't transfer more than the available balance | Boundary: the exact balance succeeds, one cent more is refused |
+| $2,500.00 daily transfer limit, resetting at midnight UTC | Boundary at $2,500.00 / $2,500.01; reset tested with an injected clock instead of waiting a day |
+| Customers only see and move their own money | IDOR tests: another customer's account returns 404 (not 403, so its existence isn't confirmed) and no money moves |
+| Lockout after 3 failed sign-ins, for 15 minutes | Lockout, refusal of the right password while locked, unlock after 15 minutes (injected clock) |
+| No username enumeration | An unknown username gets exactly the same responses as a real one |
+| Money is never created or destroyed | 500 seeded random transfers keep total holdings constant and every account reconciled to its ledger |
+| No double spending | Same `Idempotency-Key` moves money once; 20 simultaneous $100 transfers from $1,000 → exactly 10 succeed, balance never negative; double-clicking Transfer moves money once |
+| Session safety | Cookie is `HttpOnly` and `SameSite=Strict`, unreadable from page scripts; sign-out deletes the session on the server, so a replayed cookie gets 401 |
+
+Money is stored as **integer cents**, never floating point, so `0.10 + 0.20` is exactly `0.30`.
+
+**Test isolation:** each test creates its own customer through a test-only route (enabled only with `DEMO_BANK_TEST_HOOKS=true`, which the test server sets), so tests run in parallel without sharing balances, daily limits or lockout counters.
+
+```bash
+npm run test:bank     # API, UI and BDD tests for the bank
+```
+
+| File | What's in it |
+| --- | --- |
+| `lib/demo-bank/bank.js` | Business rules, independent of HTTP (unit-tested directly) |
+| `lib/demo-bank/router.js` | REST API at `/bank/api` |
+| `public/bank/` | The bank's pages |
+| `playwright/unit/demo-bank.spec.ts` | 28 unit tests on the rules |
+| `playwright/bank/bank-api.spec.ts` | 23 API tests: rules, authorization, lockout, cookies, integrity, idempotency, concurrency |
+| `playwright/bank/bank-ui.spec.ts` | 12 UI tests through Page Objects, including accessibility scans |
+| `features/transfer.feature` | BDD: boundary values as a Scenario Outline |
+
 ## Compliance Evidence Report
 
 Every Playwright test is tagged with the requirement it proves, and every requirement maps to a control:
@@ -350,7 +434,8 @@ Scenario Outline: Wrong credentials are rejected: <case>
 
 | Feature | Scenarios | Runs in CI |
 | --- | --- | --- |
-| `login.feature` (R1–R3) | Sign in and out; wrong credentials (Scenario Outline, 3 examples); password masking | When the bank secrets are set |
+| `login.feature` (R1–R3) | Sign in and out; wrong credentials (Scenario Outline, 3 examples); password masking | Always (against your bank if the secrets are set, otherwise Ledgerline) |
+| `transfer.feature` (R17, R18) | Valid transfer; amount boundaries (Scenario Outline, 6 examples in Accepted / Rejected tables); daily limit | Always |
 | `recorder.feature` (R14, R15) | Record, review and save; stop early; invalid names (Scenario Outline, 4 examples) | Always, with the scripted Codegen stand-in |
 
 Step definitions (`features/steps/*.ts`) use Cucumber expressions such as `{string}` and `{int}` and work through the Page Objects (`LoginPage`, `RecorderPage`), so a UI change is still fixed in one place. `$BANK_USERNAME` in a table means "read it from `.env`", so no real credentials live in feature files.
@@ -453,12 +538,29 @@ The clean-up logic has its own unit tests (`playwright/unit/recording.spec.ts`, 
 
 ## Continuous Integration
 
-`.github/workflows/playwright.yml` runs two jobs on every push and pull request:
+`.github/workflows/playwright.yml` runs on every push and pull request:
 
-1. **Unit, API, database, dashboard, BDD, Postman and accessibility tests**: fast, no credentials needed. A PostgreSQL 16 service container is started for the data-integrity tests.
-2. **UI tests** on Chromium, Firefox, and WebKit, which run only after the API tests pass.
+```mermaid
+flowchart LR
+    push([Push / PR]) --> api[Unit · API · DB · dashboard<br/>BDD · Postman · a11y<br/><i>Postgres service</i>]
+    push --> docker[Docker build<br/>+ Postman vs. container]
+    push --> infra[CDK tests<br/>+ cdk synth]
+    api --> ui[UI tests<br/>Chromium · Firefox · WebKit<br/>+ BDD login]
+    api --> merge[Merge results<br/>compliance report]
+    ui --> merge
+    merge --> pages[Publish to<br/>GitHub Pages<br/><i>main only</i>]
+```
 
-Each job uploads its HTML report as a build artifact. The UI tests need these repository secrets under **Settings → Secrets and variables → Actions**:
+| Job | What it does |
+| --- | --- |
+| **Unit, API, database, dashboard, BDD, Postman and accessibility tests** | Type-checks, then runs everything that needs no bank credentials, against a throwaway PostgreSQL 16 service container. Runs the Postman collections with Newman. |
+| **UI tests** | Login specs and BDD login scenarios on Chromium, Firefox and WebKit. Runs only after the first job passes. |
+| **Docker image** | Builds the image, starts it, and runs the Postman collections against the running container. |
+| **AWS infrastructure** | Infrastructure tests and a full `cdk synth`. No AWS account needed. |
+| **Compliance evidence report** | Merges both test jobs' results into one report and posts a summary on the run page. Runs even when tests fail. |
+| **Publish live test results** | On `main`, publishes the compliance and Postman reports to [GitHub Pages](https://abravebean.github.io/Bank-automation-test-bench/). |
+
+The UI tests need these repository secrets under **Settings → Secrets and variables → Actions** (without them they're reported as "not run"):
 
 - `BANK_URL`
 - `BANK_USERNAME`
@@ -480,12 +582,13 @@ The image installs the system Chromium and points both Selenium and Playwright a
 
 ## Writing a New Test
 
-Create a file in `/tests` ending in `.test.js` and export this shape (set `engine` to `'selenium'` or `'playwright'`):
+Create a file in `/tests` ending in `.test.js` and export this shape (set `engine` to `'selenium'` or `'playwright'`, and `area` to the dashboard group):
 
 ```js
 module.exports = {
   name: 'my-new-test',
   engine: 'playwright',
+  area: 'Banking',
   description: 'What this test checks.',
   async run(log) {
     // Selenium:   lib/driver.js + lib/selectors.js
@@ -514,6 +617,7 @@ bank-login-automation/
 ├── server.js              # Express API + static file server
 ├── lib/
 │   ├── driver.js          # Shared Selenium WebDriver builder
+│   ├── demo-bank/         # Ledgerline: business rules + REST API
 │   ├── db.js              # PostgreSQL run history (optional)
 │   ├── recorder.js        # Runs Codegen for the Recorder page
 │   ├── recording.js       # Cleans up Codegen recordings
@@ -526,7 +630,9 @@ bank-login-automation/
 │   ├── login-playwright.test.js
 │   └── invalid-login-playwright.test.js
 ├── playwright/
+│   ├── bank/              # Ledgerline API + UI tests
 │   ├── pages/
+│   │   ├── bank/          # Page Objects: accounts, transfer, history
 │   │   ├── LoginPage.ts   # Typed Page Object for the login page
 │   │   └── RecorderPage.ts # Page Object for the Recorder
 │   ├── reporters/

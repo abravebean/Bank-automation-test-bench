@@ -7,6 +7,7 @@ const BANK_URL = process.env.BANK_URL;
 module.exports = {
   name: 'invalid-login-rejected-playwright',
   engine: 'playwright',
+  area: 'Login',
   description: 'Playwright version: confirms an incorrect password shows an error and does not reach the welcome screen.',
   async run(log) {
     if (!BANK_URL) {

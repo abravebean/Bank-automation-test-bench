@@ -9,6 +9,7 @@ const PASSWORD = process.env.BANK_PASSWORD;
 module.exports = {
   name: 'login-playwright',
   engine: 'playwright',
+  area: 'Login',
   description: 'Playwright version: logs in with valid credentials and confirms the welcome screen appears.',
   async run(log) {
     if (!BANK_URL || !USERNAME || !PASSWORD) {

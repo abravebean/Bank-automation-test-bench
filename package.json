@@ -13,17 +13,18 @@
     "test:pw:report": "playwright show-report",
     "test:pw:install": "playwright install --with-deps",
     "test:a11y": "playwright test --project=a11y",
-    "test:ci": "bddgen && playwright test --project=unit --project=api --project=a11y --project=dashboard --project=bdd-recorder",
+    "test:ci": "bddgen && playwright test --project=unit --project=api --project=a11y --project=dashboard --project=bdd-recorder --project=bank --project=bdd-bank",
     "db:up": "docker compose up -d db",
     "record": "node scripts/record.js",
     "test:unit": "playwright test --project=unit",
     "test:recorded": "playwright test --project=recorded",
     "test:dashboard": "playwright test --project=dashboard",
     "typecheck": "tsc -p .",
-    "test:compliance": "bddgen && playwright test --project=unit --project=api --project=a11y --project=dashboard --project=bdd-recorder --project=chromium --project=bdd-login",
+    "test:compliance": "bddgen && playwright test --project=unit --project=api --project=a11y --project=dashboard --project=bdd-recorder --project=bank --project=bdd-bank --project=chromium --project=bdd-login",
     "test:postman": "node scripts/run-postman.js",
     "bddgen": "bddgen",
-    "test:bdd": "bddgen && playwright test --project=bdd-login --project=bdd-recorder"
+    "test:bdd": "bddgen && playwright test --project=bdd-login --project=bdd-recorder",
+    "test:bank": "bddgen && playwright test --project=bank --project=bdd-bank"
   },
   "keywords": [
     "selenium",

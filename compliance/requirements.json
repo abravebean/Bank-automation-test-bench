@@ -2,21 +2,173 @@
   "$comment": "Source of truth for the compliance evidence report. Tests link to these with Playwright tags (e.g. { tag: '@R1' }). A requirement with no tagged tests is reported as a coverage gap.",
   "system": "Bank Login Test Bench",
   "requirements": [
-    { "id": "R1", "title": "A user with valid credentials can sign in and sign out", "category": "Authentication", "control": "OWASP Top 10 A07: Identification and Authentication Failures", "risk": "P1" },
-    { "id": "R2", "title": "Invalid credentials are rejected with an error and no session is created", "category": "Authentication", "control": "OWASP Top 10 A07: Identification and Authentication Failures", "risk": "P1" },
-    { "id": "R3", "title": "The password field masks what the user types", "category": "Authentication", "control": "OWASP Top 10 A07: Identification and Authentication Failures", "risk": "P1" },
-    { "id": "R4", "title": "GET /api/tests returns every test once, matching its JSON contract", "category": "API contract", "control": "Interface specification (JSON Schema)", "risk": "P2" },
-    { "id": "R5", "title": "Unknown or malicious test names return 404 and run nothing", "category": "Input validation", "control": "OWASP Top 10 A01: Broken Access Control; A03: Injection", "risk": "P1" },
-    { "id": "R6", "title": "A test run streams its steps, then exactly one result", "category": "API contract", "control": "Interface specification (NDJSON stream)", "risk": "P2" },
-    { "id": "R7", "title": "Every test execution is recorded with its result and duration", "category": "Audit trail", "control": "Execution records retained in the system of record", "risk": "P2" },
-    { "id": "R8", "title": "Run history reported by the API reconciles to the database", "category": "Data integrity", "control": "Reconciliation to system of record", "risk": "P2" },
-    { "id": "R9", "title": "Tests with inconsistent results are flagged as flaky", "category": "Data quality", "control": "Result reliability monitoring", "risk": "P3" },
-    { "id": "R10", "title": "Invalid query parameters return 400 and SQL injection has no effect", "category": "Input validation", "control": "OWASP Top 10 A03: Injection", "risk": "P1" },
-    { "id": "R11", "title": "API response time stays within the p95 budget", "category": "Performance", "control": "Service level: p95 within budget (default 300 ms)", "risk": "P2" },
-    { "id": "R12", "title": "Dashboard pages meet WCAG 2.1 AA and work with a keyboard", "category": "Accessibility", "control": "WCAG 2.1 Level AA", "risk": "P2" },
-    { "id": "R13", "title": "Recorded tests never contain hard-coded URLs or credentials", "category": "Secrets management", "control": "CWE-798: Use of Hard-coded Credentials", "risk": "P1" },
-    { "id": "R14", "title": "The Recorder shows steps live, cleans the code, and saves, runs and deletes recordings", "category": "Tooling", "control": "Functional requirement", "risk": "P3" },
-    { "id": "R15", "title": "Recorder input is validated and saved files cannot be reached by path traversal", "category": "Input validation", "control": "OWASP Top 10 A01: Broken Access Control; A03: Injection", "risk": "P2" },
-    { "id": "R16", "title": "A multi-factor challenge is shown when the bank requires it", "category": "Authentication", "control": "OWASP Top 10 A07: Identification and Authentication Failures", "risk": "P1" }
+    {
+      "id": "R1",
+      "title": "A user with valid credentials can sign in and sign out",
+      "category": "Authentication",
+      "control": "OWASP Top 10 A07: Identification and Authentication Failures",
+      "risk": "P1"
+    },
+    {
+      "id": "R2",
+      "title": "Invalid credentials are rejected with an error and no session is created",
+      "category": "Authentication",
+      "control": "OWASP Top 10 A07: Identification and Authentication Failures",
+      "risk": "P1"
+    },
+    {
+      "id": "R3",
+      "title": "The password field masks what the user types",
+      "category": "Authentication",
+      "control": "OWASP Top 10 A07: Identification and Authentication Failures",
+      "risk": "P1"
+    },
+    {
+      "id": "R4",
+      "title": "GET /api/tests returns every test once, matching its JSON contract",
+      "category": "API contract",
+      "control": "Interface specification (JSON Schema)",
+      "risk": "P2"
+    },
+    {
+      "id": "R5",
+      "title": "Unknown or malicious test names return 404 and run nothing",
+      "category": "Input validation",
+      "control": "OWASP Top 10 A01: Broken Access Control; A03: Injection",
+      "risk": "P1"
+    },
+    {
+      "id": "R6",
+      "title": "A test run streams its steps, then exactly one result",
+      "category": "API contract",
+      "control": "Interface specification (NDJSON stream)",
+      "risk": "P2"
+    },
+    {
+      "id": "R7",
+      "title": "Every test execution is recorded with its result and duration",
+      "category": "Audit trail",
+      "control": "Execution records retained in the system of record",
+      "risk": "P2"
+    },
+    {
+      "id": "R8",
+      "title": "Run history reported by the API reconciles to the database",
+      "category": "Data integrity",
+      "control": "Reconciliation to system of record",
+      "risk": "P2"
+    },
+    {
+      "id": "R9",
+      "title": "Tests with inconsistent results are flagged as flaky",
+      "category": "Data quality",
+      "control": "Result reliability monitoring",
+      "risk": "P3"
+    },
+    {
+      "id": "R10",
+      "title": "Invalid query parameters return 400 and SQL injection has no effect",
+      "category": "Input validation",
+      "control": "OWASP Top 10 A03: Injection",
+      "risk": "P1"
+    },
+    {
+      "id": "R11",
+      "title": "API response time stays within the p95 budget",
+      "category": "Performance",
+      "control": "Service level: p95 within budget (default 300 ms)",
+      "risk": "P2"
+    },
+    {
+      "id": "R12",
+      "title": "Dashboard pages meet WCAG 2.1 AA and work with a keyboard",
+      "category": "Accessibility",
+      "control": "WCAG 2.1 Level AA",
+      "risk": "P2"
+    },
+    {
+      "id": "R13",
+      "title": "Recorded tests never contain hard-coded URLs or credentials",
+      "category": "Secrets management",
+      "control": "CWE-798: Use of Hard-coded Credentials",
+      "risk": "P1"
+    },
+    {
+      "id": "R14",
+      "title": "The Recorder shows steps live, cleans the code, and saves, runs and deletes recordings",
+      "category": "Tooling",
+      "control": "Functional requirement",
+      "risk": "P3"
+    },
+    {
+      "id": "R15",
+      "title": "Recorder input is validated and saved files cannot be reached by path traversal",
+      "category": "Input validation",
+      "control": "OWASP Top 10 A01: Broken Access Control; A03: Injection",
+      "risk": "P2"
+    },
+    {
+      "id": "R16",
+      "title": "A multi-factor challenge is shown when the bank requires it",
+      "category": "Authentication",
+      "control": "OWASP Top 10 A07: Identification and Authentication Failures",
+      "risk": "P1"
+    },
+    {
+      "id": "R17",
+      "title": "Transfer amounts are validated at their boundaries: smallest amount, decimal places and format",
+      "category": "Input validation",
+      "control": "Boundary value analysis; money held as integer cents",
+      "risk": "P1"
+    },
+    {
+      "id": "R18",
+      "title": "Transfers enforce the available balance and the $2,500.00 daily limit",
+      "category": "Business rules",
+      "control": "Funds availability and transaction limits",
+      "risk": "P1"
+    },
+    {
+      "id": "R19",
+      "title": "Customers can only see and move money in their own accounts",
+      "category": "Authorization",
+      "control": "OWASP Top 10 A01: Broken Access Control (IDOR)",
+      "risk": "P1"
+    },
+    {
+      "id": "R20",
+      "title": "Sign-in locks after 3 failed attempts and never reveals whether a username exists",
+      "category": "Authentication",
+      "control": "OWASP Top 10 A07: Identification and Authentication Failures",
+      "risk": "P1"
+    },
+    {
+      "id": "R21",
+      "title": "Money is never created or destroyed, and every account reconciles to its ledger",
+      "category": "Data integrity",
+      "control": "Ledger reconciliation (sum of entries equals balance)",
+      "risk": "P1"
+    },
+    {
+      "id": "R22",
+      "title": "Repeated or simultaneous transfer requests can't move money twice or overdraw an account",
+      "category": "Concurrency",
+      "control": "CWE-362: Race Condition; idempotent requests",
+      "risk": "P1"
+    },
+    {
+      "id": "R23",
+      "title": "Session cookies can't be read by scripts or sent by other sites, and signing out ends the session",
+      "category": "Session management",
+      "control": "CWE-1004: Sensitive Cookie Without HttpOnly; OWASP Top 10 A07",
+      "risk": "P2"
+    },
+    {
+      "id": "R24",
+      "title": "Bank pages meet WCAG 2.1 AA",
+      "category": "Accessibility",
+      "control": "WCAG 2.1 Level AA",
+      "risk": "P2"
+    }
   ]
 }

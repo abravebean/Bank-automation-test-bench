@@ -7,6 +7,8 @@ import { RecorderPage } from '../../playwright/pages/RecorderPage';
 interface ScenarioContext {
   /** The unique name actually used for a recording in this scenario. */
   recordingName?: string;
+  /** The start page a recording began on. */
+  startUrl?: string;
 }
 
 export const test = base.extend<{ loginPage: LoginPage; recorderPage: RecorderPage; ctx: ScenarioContext }>({

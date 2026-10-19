@@ -218,6 +218,12 @@ export default class ComplianceReporter implements Reporter {
   }
 
   async onEnd(result: FullResult): Promise<void> {
+    // `playwright test --list` (or a run where every test was filtered out) executes nothing.
+    // Writing a report then would overwrite real evidence with "not run" everywhere.
+    if (this.results.size === 0) {
+      console.log('\nCompliance report: no tests ran, so the existing report was left unchanged.');
+      return;
+    }
     const catalog: Catalog = JSON.parse(fs.readFileSync(this.requirementsFile, 'utf8'));
     const known = new Set(catalog.requirements.map((r) => r.id));
 
