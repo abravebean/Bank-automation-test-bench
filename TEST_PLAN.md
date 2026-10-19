@@ -42,6 +42,10 @@ Make sure that a customer can log in and out of the demo bank, that bad credenti
 | Recorded | New flows captured with Playwright Codegen, then reviewed and cleaned (secrets → env vars) | `npm run record` | Locally, then promoted to the suite |
 | Unit | Helper logic: Codegen clean-up, code → plain-English steps | Playwright Test | CI, every push |
 | Dashboard UI | Recorder page end to end, with a scripted stand-in for Codegen | Playwright Test, axe-core | CI, every push |
+| BDD | Business-readable scenarios for login and the Recorder (Scenario Outlines for data variations) | Gherkin, playwright-bdd | CI, every push |
+| API collections | Chained requests, data-driven security payloads from CSV | Postman, Newman | CI (dashboard and Docker container), after every AWS deploy |
+| Infrastructure | Security and cost rules in the generated CloudFormation | AWS CDK assertions, node:test | CI, every push; before every deploy |
+| Smoke (post-deploy) | Postman collections against the live AWS URL | Newman | After every deploy |
 | Manual / exploratory | New UI changes, visual review of the dashboard | Browser, `HEADLESS=false` | Before a release |
 
 The same login scenarios exist in both Selenium and Playwright so the two frameworks can be compared side by side.
@@ -94,7 +98,8 @@ The requirement catalog lives in [`compliance/requirements.json`](compliance/req
 |---|---|
 | Local | `npm start`, optional `docker compose up -d db` for run history |
 | Docker | `docker compose up --build` (app + PostgreSQL) |
-| CI | GitHub Actions: Postgres service container, Chromium/Firefox/WebKit |
+| CI | GitHub Actions: Postgres service container, Chromium/Firefox/WebKit, Docker build |
+| AWS | ECS Fargate + RDS PostgreSQL via CDK (`infra/`), deployed on demand |
 
 ## 8. Entry and exit criteria
 

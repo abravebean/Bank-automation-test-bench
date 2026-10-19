@@ -1,0 +1,612 @@
+{
+  "info": {
+    "_postman_id": "2f723529-d948-544f-90f8-3674bb69a481",
+    "name": "Bank Test Bench API",
+    "description": "API tests for the Bank Login Test Bench dashboard. Import into Postman, select the **Local** environment, and run the collection, or run it from the command line with `npm run test:postman` (Newman).\n\nRequests are chained with collection variables: the health check records whether run history is on, the test list picks a test to run, and the run-history folder checks that run was saved.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health and discovery",
+      "item": [
+        {
+          "name": "Health check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('responds within 500 ms', () => pm.expect(pm.response.responseTime).to.be.below(500));",
+                  "const body = pm.response.json();",
+                  "pm.test('matches the health contract', () => {",
+                  "  pm.response.to.have.jsonSchema({ type: 'object', required: ['status', 'database'],",
+                  "    properties: { status: { const: 'ok' }, database: { enum: ['up', 'down', 'disabled'] } } });",
+                  "});",
+                  "// Later requests branch on whether run history (PostgreSQL) is enabled.",
+                  "pm.collectionVariables.set('database', body.database);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "health"
+              ]
+            },
+            "description": "Liveness check. Saves the database status so the run-history requests know what to expect."
+          }
+        },
+        {
+          "name": "List tests",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK with JSON', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/json/);",
+                  "});",
+                  "pm.test('matches the test-list contract', () => pm.response.to.have.jsonSchema({\n    type: 'array', minItems: 1,\n    items: { type: 'object', required: ['name', 'description', 'engine'], additionalProperties: false,\n      properties: { name: { type: 'string', minLength: 1 }, description: { type: 'string' }, engine: { enum: ['selenium', 'playwright'] } } }\n}));",
+                  "const catalog = pm.response.json();",
+                  "pm.test('every test is listed exactly once', () => {",
+                  "  const names = catalog.map((t) => t.name);",
+                  "  pm.expect(new Set(names).size).to.eql(names.length);",
+                  "});",
+                  "pm.test('both engines are present', () => {",
+                  "  pm.expect(catalog.some((t) => t.engine === 'selenium')).to.be.true;",
+                  "  pm.expect(catalog.some((t) => t.engine === 'playwright')).to.be.true;",
+                  "});",
+                  "// The first call loads the test modules, so this budget is looser than the health check's.",
+                  "pm.test('responds within 1 s', () => pm.expect(pm.response.responseTime).to.be.below(1000));",
+                  "// Chain: the next request runs this test.",
+                  "pm.collectionVariables.set('testName', 'invalid-login-rejected-playwright');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tests",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tests"
+              ]
+            },
+            "description": "Contract test for the test catalog."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Run a test",
+      "item": [
+        {
+          "name": "Run a test (NDJSON stream)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK with an NDJSON stream', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.headers.get('Content-Type')).to.match(/^application\\/x-ndjson/);",
+                  "});",
+                  "const events = pm.response.text().split('\\n').filter((l) => l.trim()).map((l) => JSON.parse(l));",
+                  "const results = events.filter((e) => e.type === 'result');",
+                  "const name = pm.collectionVariables.get('testName');",
+                  "pm.test('ends with exactly one result event', () => {",
+                  "  pm.expect(results).to.have.lengthOf(1);",
+                  "  pm.expect(events[events.length - 1].type).to.eql('result');",
+                  "});",
+                  "pm.test('result has the expected shape', () => {",
+                  "  const r = results[0];",
+                  "  pm.expect(r.name).to.eql(name);",
+                  "  pm.expect(r.passed).to.be.a('boolean');",
+                  "  pm.expect(r.message).to.be.a('string');",
+                  "  pm.expect(Number.isInteger(r.durationMs) && r.durationMs >= 0).to.be.true;",
+                  "});",
+                  "pm.test('every log line belongs to this test', () => {",
+                  "  events.filter((e) => e.type === 'log').forEach((e) => pm.expect(e.test).to.eql(name));",
+                  "});",
+                  "// Chain: when run history is on, the next folder checks this run was saved.",
+                  "pm.collectionVariables.set('runId', results[0].runId || '');",
+                  "pm.collectionVariables.set('runPassed', String(results[0].passed));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tests/{{testName}}/run",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tests",
+                "{{testName}}",
+                "run"
+              ]
+            },
+            "description": "Runs one dashboard test and validates the streamed events. Without BANK_URL the test itself fails fast, which is still a valid stream to check."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Run history",
+      "description": "Needs DATABASE_URL. Without it each request checks for a clear 503 instead.",
+      "item": [
+        {
+          "name": "Recent runs match the run just made",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const dbOn = pm.collectionVariables.get('database') === 'up';",
+                  "if (!dbOn) {",
+                  "  pm.test('run history is off: 503 explains why', () => {",
+                  "    pm.response.to.have.status(503);",
+                  "    pm.expect(pm.response.json().error).to.match(/DATABASE_URL/);",
+                  "  });",
+                  "  return;",
+                  "}",
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('matches the run contract', () => pm.response.to.have.jsonSchema({\n    type: 'array',\n    items: { type: 'object', required: ['id', 'name', 'engine', 'passed', 'message', 'durationMs', 'startedAt'], additionalProperties: false,\n      properties: { id: { type: 'integer', minimum: 1 }, name: { type: 'string' }, engine: { enum: ['selenium', 'playwright'] },\n        passed: { type: 'boolean' }, message: { type: 'string' }, durationMs: { type: 'integer', minimum: 0 }, startedAt: { type: 'string' } } }\n}));",
+                  "const runs = pm.response.json();",
+                  "pm.test('respects limit=5', () => pm.expect(runs.length).to.be.at.most(5));",
+                  "pm.test('newest first', () => {",
+                  "  const times = runs.map((r) => Date.parse(r.startedAt));",
+                  "  pm.expect(times).to.eql([...times].sort((a, b) => b - a));",
+                  "});",
+                  "pm.test('the run from the previous request was saved with the same result', () => {",
+                  "  const runId = Number(pm.collectionVariables.get('runId'));",
+                  "  const saved = runs.find((r) => r.id === runId);",
+                  "  pm.expect(saved, `run ${runId} in /api/runs`).to.exist;",
+                  "  pm.expect(String(saved.passed)).to.eql(pm.collectionVariables.get('runPassed'));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/runs?test={{testName}}&limit=5",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "runs"
+              ],
+              "query": [
+                {
+                  "key": "test",
+                  "value": "{{testName}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            },
+            "description": "Checks the run from the previous request was saved (needs DATABASE_URL; otherwise expects 503)."
+          }
+        },
+        {
+          "name": "Invalid limit is rejected",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const dbOn = pm.collectionVariables.get('database') === 'up';",
+                  "pm.test(dbOn ? '400 for limit=0' : '503 when run history is off', () => pm.response.to.have.status(dbOn ? 400 : 503));",
+                  "pm.test('error message is JSON', () => pm.expect(pm.response.json().error).to.be.a('string'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/runs?limit=0",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "runs"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Stats are internally consistent",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const dbOn = pm.collectionVariables.get('database') === 'up';",
+                  "if (!dbOn) { pm.test('503 when run history is off', () => pm.response.to.have.status(503)); return; }",
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const stats = pm.response.json();",
+                  "pm.test('pass rate, counts and flaky flag agree', () => {",
+                  "  stats.forEach((s) => {",
+                  "    pm.expect(s.passedRuns).to.be.at.most(s.totalRuns);",
+                  "    pm.expect(s.passRate).to.be.within(0, 1);",
+                  "    pm.expect(Math.abs(s.passRate - s.passedRuns / s.totalRuns)).to.be.below(0.001);",
+                  "    pm.expect(s.flaky).to.eql(s.passedRuns > 0 && s.passedRuns < s.totalRuns);",
+                  "  });",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "stats"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Negative and security",
+      "item": [
+        {
+          "name": "Unknown test returns 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 Not Found', () => pm.response.to.have.status(404));",
+                  "pm.test('error body matches the contract', () => pm.response.to.have.jsonSchema({",
+                  "  type: 'object', required: ['name', 'passed', 'message'],",
+                  "  properties: { passed: { const: false }, message: { const: 'Test not found' } } }));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tests/does-not-exist/run",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tests",
+                "does-not-exist",
+                "run"
+              ]
+            }
+          }
+        },
+        {
+          "name": "GET on a run endpoint is not allowed",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404: runs only start with POST', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tests/login/run",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tests",
+                "login",
+                "run"
+              ]
+            }
+          }
+        },
+        {
+          "name": "SQL injection in the run filter is inert",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const dbOn = pm.collectionVariables.get('database') === 'up';",
+                  "if (!dbOn) { pm.test('503 when run history is off', () => pm.response.to.have.status(503)); return; }",
+                  "pm.test('treated as a plain-text name: 200 and no rows', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json()).to.eql([]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/runs?test=x'%3B%20DROP%20TABLE%20test_runs%3B%20--",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "runs"
+              ],
+              "query": [
+                {
+                  "key": "test",
+                  "value": "x'%3B%20DROP%20TABLE%20test_runs%3B%20--"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Table survives the injection attempt",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const dbOn = pm.collectionVariables.get('database') === 'up';",
+                  "if (!dbOn) { pm.test('503 when run history is off', () => pm.response.to.have.status(503)); return; }",
+                  "pm.test('test_runs still answers queries', () => {",
+                  "  pm.response.to.have.status(200);",
+                  "  pm.expect(pm.response.json().length).to.be.at.least(1);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/runs?limit=1",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "runs"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "1"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Recorder (local only)",
+      "description": "The recorder only answers requests from localhost, so this folder is skipped when testing a deployed copy.",
+      "item": [
+        {
+          "name": "Start rejects an invalid name",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 with a reason', () => {",
+                  "  pm.response.to.have.status(400);",
+                  "  pm.expect(pm.response.json().error).to.match(/kebab-case/);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/recorder/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "recorder",
+                "start"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"../../server\",\n  \"url\": \"https://demo-bank.example.com/login\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Start rejects a javascript: URL",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 for a non-http URL', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/recorder/start",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "recorder",
+                "start"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"ok-name\",\n  \"url\": \"javascript:alert(1)\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Save without a recording returns 409",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 Conflict', () => pm.response.to.have.status(409));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/recorder/save",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "recorder",
+                "save"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Every response must be JSON or NDJSON, never HTML, so injected input can't render as a page.",
+          "pm.test('response is JSON, not HTML', () => pm.expect(pm.response.headers.get('Content-Type') || '').to.match(/json/));"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "database",
+      "value": ""
+    },
+    {
+      "key": "testName",
+      "value": ""
+    },
+    {
+      "key": "runId",
+      "value": ""
+    },
+    {
+      "key": "runPassed",
+      "value": ""
+    }
+  ]
+}

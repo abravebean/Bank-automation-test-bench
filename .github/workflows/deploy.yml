@@ -1,0 +1,97 @@
+name: Deploy to AWS
+
+# Manual only: deploys cost money, so nothing here runs on push.
+# One-time setup (see infra/README.md):
+#   - an IAM role GitHub can assume with OIDC, saved as the AWS_DEPLOY_ROLE_ARN secret
+#   - optional: a Secrets Manager secret with BANK_URL, BANK_USERNAME, BANK_PASSWORD
+on:
+  workflow_dispatch:
+    inputs:
+      allowed_cidrs:
+        description: 'Who may open the dashboard: comma-separated CIDRs, e.g. 203.0.113.7/32'
+        required: true
+      bank_secret_name:
+        description: 'Secrets Manager secret with the bank test credentials (optional)'
+        required: false
+        default: 'bank-test-bench/bank'
+      aws_region:
+        description: 'AWS region'
+        required: true
+        default: 'us-east-1'
+
+permissions:
+  id-token: write # OIDC: short-lived AWS credentials, no access keys stored in GitHub
+  contents: read
+
+concurrency:
+  group: deploy-aws
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Test, deploy, then smoke-test the live URL
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: aws
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            infra/package-lock.json
+
+      - name: Infrastructure tests must pass before anything is deployed
+        working-directory: infra
+        run: |
+          npm ci
+          npm test
+
+      - name: Get AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ inputs.aws_region }}
+
+      # The smoke tests run from this GitHub runner, so its IP is allowed too.
+      - name: Work out who may reach the dashboard
+        id: access
+        run: |
+          RUNNER_IP=$(curl -fsS https://checkip.amazonaws.com | tr -d '[:space:]')
+          echo "cidrs=${{ inputs.allowed_cidrs }},${RUNNER_IP}/32" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy (builds the Docker image and pushes it to ECR)
+        working-directory: infra
+        run: >
+          npx cdk deploy --require-approval never
+          -c allowedCidrs=${{ steps.access.outputs.cidrs }}
+          -c bankSecretName=${{ inputs.bank_secret_name }}
+          --outputs-file outputs.json
+
+      - name: Read the dashboard URL
+        id: out
+        run: echo "url=$(jq -r '.BankTestBench.DashboardUrl' infra/outputs.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Post-deploy smoke tests (Postman collections against the live URL)
+        run: |
+          npm ci
+          npm run test:postman -- --base-url ${{ steps.out.outputs.url }}
+
+      - name: Summary
+        if: ${{ always() }}
+        run: |
+          echo "### Deployed dashboard" >> "$GITHUB_STEP_SUMMARY"
+          echo "${{ steps.out.outputs.url }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Tear down when you're done: \`cd infra && npx cdk destroy\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload smoke test reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: smoke-test-report
+          path: reports/newman/
+          retention-days: 14

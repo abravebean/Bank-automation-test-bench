@@ -17,6 +17,6 @@
     "noUnusedLocals": true,
     "types": ["node"]
   },
-  "include": ["playwright/**/*.ts", "playwright.config.ts", "merge.config.ts"],
+  "include": ["playwright/**/*.ts", "features/**/*.ts", "playwright.config.ts", "merge.config.ts"],
   "exclude": ["node_modules", "playwright/recorded/**"]
 }

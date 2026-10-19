@@ -84,6 +84,32 @@ interface RequirementRecord extends Requirement {
 const ACTION = /^(Navigate|Click|Double click|Fill|Press|Type|Check|Uncheck|Select option|Hover|Set input files|Go back|Reload|Wait for|GET|POST|PUT|PATCH|DELETE)\b/i;
 const MAX_STEPS = 25;
 
+/**
+ * Secret values this process can see (bank credentials, database password). Step titles
+ * include what was typed (Fill "..."), so every secret is blanked out before it reaches
+ * the report, which may be published.
+ */
+function secretValues(): string[] {
+  const env = process.env;
+  const values = [env.BANK_USERNAME, env.BANK_PASSWORD, env.PGPASSWORD];
+  try {
+    if (env.DATABASE_URL) values.push(decodeURIComponent(new URL(env.DATABASE_URL).password));
+  } catch {
+    /* not a URL */
+  }
+  // Longest first, so a password that contains the username is still fully hidden.
+  return values.filter((v): v is string => !!v && v.length >= 4).sort((a, b) => b.length - a.length);
+}
+
+const SECRETS = secretValues();
+const HIDDEN = '•••••• (hidden)';
+
+export function redact(text: string, secrets: string[] = SECRETS): string {
+  let out = text;
+  for (const secret of secrets) out = out.split(secret).join(HIDDEN);
+  return out;
+}
+
 function stripAnsi(s: string): string {
   // eslint-disable-next-line no-control-regex
   return s.replace(/\u001b\[[0-9;]*m/g, '');
@@ -250,13 +276,13 @@ export default class ComplianceReporter implements Reporter {
     const outcome = results.length ? outcomeMap[test.outcome()] : 'skipped';
 
     const skip = [...test.annotations, ...(last?.annotations ?? [])].find((a) => a.type === 'skip');
-    const skipReason = outcome === 'skipped' ? skip?.description ?? (results.length ? 'Skipped' : 'Not executed in this run') : null;
+    const skipReason = outcome === 'skipped' ? redact(skip?.description ?? (results.length ? 'Skipped' : 'Not executed in this run')) : null;
 
-    const error = last?.errors.length ? stripAnsi(last.errors.map((e) => e.message ?? '').join('\n')).split('\n').slice(0, 6).join('\n') : null;
+    const error = last?.errors.length ? redact(stripAnsi(last.errors.map((e) => e.message ?? '').join('\n')).split('\n').slice(0, 6).join('\n')) : null;
 
     return {
       id: test.id,
-      title: test.titlePath().slice(3).join(' › '),
+      title: redact(test.titlePath().slice(3).join(' › ')),
       file: path.relative(this.config.rootDir, test.location.file),
       line: test.location.line,
       project: test.parent.project()?.name ?? '',
@@ -265,7 +291,7 @@ export default class ComplianceReporter implements Reporter {
       attempts: results.length,
       durationMs: results.reduce((sum, r) => sum + r.duration, 0),
       startedAt: results[0]?.startTime.toISOString() ?? null,
-      steps: last ? readableSteps(last.steps) : [],
+      steps: last ? readableSteps(last.steps).map((step) => redact(step)) : [],
       error,
       skipReason,
       evidence: last ? this.collectEvidence(last) : [],

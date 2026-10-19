@@ -8,7 +8,7 @@ on:
 
 jobs:
   api:
-    name: Unit, API, database, dashboard & accessibility tests
+    name: Unit, API, database, dashboard, BDD, Postman & accessibility tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
     # Throwaway PostgreSQL for the run-history / data-integrity tests.
@@ -49,8 +49,15 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Run unit, API, database, dashboard & accessibility tests
-        run: npx playwright test --project=unit --project=api --project=a11y --project=dashboard
+      - name: Generate BDD tests from the feature files
+        run: npx bddgen
+
+      - name: Run unit, API, database, dashboard, BDD & accessibility tests
+        run: npx playwright test --project=unit --project=api --project=a11y --project=dashboard --project=bdd-recorder
+
+      - name: Run Postman collections (Newman)
+        if: ${{ !cancelled() }}
+        run: npm run test:postman
 
       - name: Upload API test report
         if: ${{ !cancelled() }}
@@ -67,6 +74,14 @@ jobs:
           name: blob-report-api
           path: blob-report/
           retention-days: 1
+
+      - name: Upload Postman (Newman) reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: postman-report
+          path: reports/newman/
+          retention-days: 14
 
   e2e:
     name: UI tests (Chromium, Firefox, WebKit)
@@ -94,8 +109,11 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
-      - name: Run UI tests
-        run: npx playwright test --project=chromium --project=firefox --project=webkit
+      - name: Generate BDD tests from the feature files
+        run: npx bddgen
+
+      - name: Run UI tests (specs and BDD scenarios)
+        run: npx playwright test --project=chromium --project=firefox --project=webkit --project=bdd-login
 
       - name: Upload UI test report
         if: ${{ !cancelled() }}
@@ -123,6 +141,10 @@ jobs:
     env:
       # Only the host is printed in the report, never the full URL or any credentials.
       BANK_URL: ${{ secrets.BANK_URL }}
+      # Not used to log in: the reporter needs the values so it can blank them out of
+      # step titles (Fill "...") before the report is published.
+      BANK_USERNAME: ${{ secrets.BANK_USERNAME }}
+      BANK_PASSWORD: ${{ secrets.BANK_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
 
@@ -160,3 +182,101 @@ jobs:
           name: merged-test-report
           path: playwright-report/
           retention-days: 14
+
+  container:
+    name: Docker image builds, starts and passes the API tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Build the image
+        run: docker build -t bank-test-bench:ci .
+
+      - name: Start the container
+        run: docker run -d --name bench -p 3000:3000 bank-test-bench:ci
+
+      - name: Install Newman
+        run: npm ci
+
+      - name: Run the Postman collections against the container
+        run: npm run test:postman -- --base-url http://localhost:3000
+
+      - name: Container logs
+        if: ${{ failure() }}
+        run: docker logs bench
+
+  infra:
+    name: AWS infrastructure (CDK) tests and synth
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: infra/package-lock.json
+
+      - name: Install CDK dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Infrastructure tests (security and cost rules)
+        run: npm test
+
+      - name: Synthesize CloudFormation (no AWS account needed)
+        run: npx cdk synth -c allowedCidrs=203.0.113.7/32 --quiet
+
+  # Live test results on GitHub Pages: https://abravebean.github.io/Bank-automation-test-bench/
+  # Publishes the compliance report and the Postman reports (no traces: they would contain typed values).
+  pages:
+    name: Publish live test results (GitHub Pages)
+    if: ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    needs: [api, compliance]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download the compliance report
+        uses: actions/download-artifact@v4
+        with:
+          name: compliance-report
+          path: _site/compliance
+
+      - name: Download the Postman reports
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: postman-report
+          path: _site/api
+
+      - name: Add the landing page
+        run: cp site/index.html _site/index.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
+
