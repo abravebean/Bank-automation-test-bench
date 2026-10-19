@@ -6,21 +6,24 @@
   "type": "commonjs",
   "scripts": {
     "start": "node server.js",
-    "test:pw": "playwright test",
+    "test:pw": "bddgen && playwright test",
     "test:pw:chromium": "playwright test --project=chromium",
     "test:api": "playwright test --project=api",
     "test:pw:headed": "playwright test --headed --project=chromium",
     "test:pw:report": "playwright show-report",
     "test:pw:install": "playwright install --with-deps",
     "test:a11y": "playwright test --project=a11y",
-    "test:ci": "playwright test --project=unit --project=api --project=a11y --project=dashboard",
+    "test:ci": "bddgen && playwright test --project=unit --project=api --project=a11y --project=dashboard --project=bdd-recorder",
     "db:up": "docker compose up -d db",
     "record": "node scripts/record.js",
     "test:unit": "playwright test --project=unit",
     "test:recorded": "playwright test --project=recorded",
     "test:dashboard": "playwright test --project=dashboard",
     "typecheck": "tsc -p .",
-    "test:compliance": "playwright test --project=unit --project=api --project=a11y --project=dashboard --project=chromium"
+    "test:compliance": "bddgen && playwright test --project=unit --project=api --project=a11y --project=dashboard --project=bdd-recorder --project=chromium --project=bdd-login",
+    "test:postman": "node scripts/run-postman.js",
+    "bddgen": "bddgen",
+    "test:bdd": "bddgen && playwright test --project=bdd-login --project=bdd-recorder"
   },
   "keywords": [
     "selenium",
@@ -43,7 +46,12 @@
     "typescript",
     "compliance",
     "traceability",
-    "audit-evidence"
+    "audit-evidence",
+    "bdd",
+    "gherkin",
+    "cucumber",
+    "postman",
+    "newman"
   ],
   "license": "MIT",
   "dependencies": {
@@ -61,6 +69,9 @@
     "@types/node": "^22.9.0",
     "@types/pg": "^8.11.10",
     "ajv": "^8.20.0",
+    "newman": "^6.2.1",
+    "newman-reporter-htmlextra": "^1.23.1",
+    "playwright-bdd": "^9.2.1",
     "typescript": "^5.6.3"
   }
 }

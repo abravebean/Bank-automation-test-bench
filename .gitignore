@@ -8,3 +8,5 @@ blob-report/
 playwright/recorded/.*.raw.js
 compliance-report/
 all-blob-reports/
+reports/
+.features-gen/

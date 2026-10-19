@@ -7,6 +7,9 @@
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?logo=postgresql&logoColor=white)
+![Postman](https://img.shields.io/badge/Postman-FF6C37?logo=postman&logoColor=white)
+![Cucumber](https://img.shields.io/badge/BDD-Gherkin-23D96C?logo=cucumber&logoColor=white)
+![AWS](https://img.shields.io/badge/AWS-CDK-232F3E?logo=amazonwebservices&logoColor=white)
 ![Tests](https://github.com/abravebean/Bank-automation-test-bench/actions/workflows/playwright.yml/badge.svg)
 
 An end-to-end test automation suite for a demo bank login flow, built with **both Selenium WebDriver and Playwright**. It covers UI, API, database, performance and accessibility testing:
@@ -19,6 +22,10 @@ An end-to-end test automation suite for a demo bank login flow, built with **bot
 6. **A test recorder** with its own page in the dashboard: click through the bank site and watch each step appear live as plain English and Playwright code (Codegen). Secrets are moved to `.env` automatically, and you can review, edit, save and run recordings without leaving the browser.
 
 7. **A compliance evidence report**: every test is linked to a requirement and a control (OWASP, WCAG, CWE). Each run produces an audit-ready report with the traceability matrix, step-by-step evidence, screenshots, coverage gaps and SHA-256 integrity hashes.
+
+8. **Postman collections** run with **Newman**: chained API requests with test scripts, plus a data-driven security collection fed by a CSV of attack payloads.
+9. **BDD scenarios** in Gherkin (`Given / When / Then`) for the login flow and the Recorder, with Cucumber-style step definitions on the Page Objects.
+10. **AWS deployment** as code (CDK, TypeScript): Fargate behind a load balancer, private RDS PostgreSQL, Secrets Manager, with infrastructure tests and post-deploy smoke tests.
 
 The Playwright suite is written in **TypeScript** (strict mode, type-checked in CI). The scope, risks and test strategy are in the **[Test Plan](TEST_PLAN.md)**.
 
@@ -42,6 +49,9 @@ The Playwright suite is written in **TypeScript** (strict mode, type-checked in 
 - [Performance Tests](#performance-tests)
 - [Accessibility Tests](#accessibility-tests)
 - [Compliance Evidence Report](#compliance-evidence-report)
+- [BDD Scenarios (Gherkin)](#bdd-scenarios-gherkin)
+- [Postman Collections (Newman)](#postman-collections-newman)
+- [Deploying to AWS](#deploying-to-aws)
 - [TypeScript](#typescript)
 - [Recording Tests (Codegen)](#recording-tests-codegen)
 - [Continuous Integration](#continuous-integration)
@@ -111,7 +121,10 @@ The Playwright suite is written in **TypeScript** (strict mode, type-checked in 
 | Configuration   | [dotenv](https://www.npmjs.com/package/dotenv)                         |
 | Dashboard       | HTML, CSS, vanilla JavaScript                                          |
 | CI/CD           | GitHub Actions                                                         |
+| BDD             | Gherkin feature files, Cucumber expressions, [playwright-bdd](https://github.com/vitalets/playwright-bdd) |
+| API collections | Postman, [Newman](https://www.npmjs.com/package/newman) (CLI, JUnit and HTML reports) |
 | Containers      | Docker, Docker Compose                                                 |
+| Cloud           | AWS CDK (TypeScript): ECS Fargate, ALB, RDS PostgreSQL, Secrets Manager, ECR; GitHub OIDC |
 
 ## Getting Started
 
@@ -194,6 +207,8 @@ npm run test:pw:chromium   # UI tests on Chromium only
 npm run test:api           # API, database and performance tests
 npm run test:a11y          # accessibility tests
 npm run test:compliance    # suites that make up the compliance report
+npm run test:bdd           # BDD scenarios (Gherkin)
+npm run test:postman       # Postman collections with Newman
 npm run typecheck          # TypeScript type check
 npm run test:unit          # unit tests (Codegen clean-up)
 npm run record -- <name>   # record a new test with Codegen
@@ -313,6 +328,62 @@ Then open **Compliance report** in the dashboard, or `compliance-report/index.ht
 
 **In CI**, the API job and the cross-browser UI job each save raw results (Playwright blob reports). A third job merges them with `npx playwright merge-reports --config merge.config.ts`, so one report covers every requirement and browser. It runs even when tests fail, posts the summary table to the run page, and keeps the report as a build artifact for 90 days.
 
+## BDD Scenarios (Gherkin)
+
+Business-readable scenarios live in `features/`:
+
+```gherkin
+@R2
+Scenario Outline: Wrong credentials are rejected: <case>
+  When I sign in as "<username>" with password "<password>"
+  Then I see a sign-in error
+  And no session is started
+
+  Examples:
+    | case                  | username        | password                  |
+    | unknown user          | not-a-real-user | definitely-wrong-password |
+    | wrong password        | $BANK_USERNAME  | definitely-wrong-password |
+    | SQL injection attempt | ' OR '1'='1     | ' OR '1'='1               |
+```
+
+| Feature | Scenarios | Runs in CI |
+| --- | --- | --- |
+| `login.feature` (R1–R3) | Sign in and out; wrong credentials (Scenario Outline, 3 examples); password masking | When the bank secrets are set |
+| `recorder.feature` (R14, R15) | Record, review and save; stop early; invalid names (Scenario Outline, 4 examples) | Always, with the scripted Codegen stand-in |
+
+Step definitions (`features/steps/*.ts`) use Cucumber expressions such as `{string}` and `{int}` and work through the Page Objects (`LoginPage`, `RecorderPage`), so a UI change is still fixed in one place. `$BANK_USERNAME` in a table means "read it from `.env`", so no real credentials live in feature files.
+
+The scenarios run on the Playwright runner through [playwright-bdd](https://github.com/vitalets/playwright-bdd): `npx bddgen` turns each scenario into a Playwright test, so BDD gets the same traces, screenshots, parallel runs and CI as the rest of the suite. Gherkin tags such as `@R2` become Playwright tags, so **BDD scenarios show up in the compliance evidence report** with each `Given/When/Then` step listed as evidence.
+
+```bash
+npm run test:bdd
+```
+
+## Postman Collections (Newman)
+
+`postman/` holds collections you can import into Postman or run from the command line:
+
+| File | What it does |
+| --- | --- |
+| `bank-test-bench.postman_collection.json` | 13 requests in 5 folders: health and discovery, running a test (NDJSON stream), run history, negative and security cases, Recorder validation. Requests are **chained** with collection variables: the health check records whether the database is on, a test run's `runId` is then looked up in `/api/runs`. A collection-level script checks every response is JSON, never HTML. |
+| `malicious-input.postman_collection.json` + `data/malicious-names.csv` | **Data-driven**: one request run once per CSV row (path traversal, script injection, SQL injection, command injection, oversized input), each with its expected status. |
+| `local.postman_environment.json` | `baseUrl` for the Local environment |
+
+```bash
+npm run test:postman                                  # starts the dashboard, runs both collections, stops it
+npm run test:postman -- --base-url http://my-host     # test an already-running or deployed copy
+```
+
+Reports land in `reports/newman/` (JUnit XML and an HTML report). The runner asks the server whether the Recorder is available and skips that folder when it isn't (Docker, AWS). CI runs the collections against the dashboard, against the **built Docker container**, and against the **live AWS deployment** after each deploy.
+
+Writing the collection turned up a real inconsistency: unknown `/api` routes returned Express's default HTML error page. They now return a JSON 404.
+
+## Deploying to AWS
+
+`infra/` deploys the dashboard to AWS with the CDK (TypeScript): ECS Fargate behind an Application Load Balancer, RDS PostgreSQL 16 in isolated subnets, and credentials in Secrets Manager. It has its own infrastructure tests that check the security and cost rules in the generated CloudFormation (encrypted private database, no secrets in plain text, nothing open to the world, no NAT gateway), and CI runs them with a full `cdk synth` on every push. A manual GitHub Actions workflow deploys with OIDC (no stored AWS keys) and then runs the Postman collections against the live URL.
+
+See **[infra/README.md](infra/README.md)** for setup, cost and teardown.
+
 ## TypeScript
 
 The Playwright suite (specs, Page Object, reporter, helpers and configs) is TypeScript in strict mode. Playwright runs `.ts` files directly, so there is no build step: `npm run typecheck` only checks types, and runs first in CI.
@@ -382,7 +453,7 @@ The clean-up logic has its own unit tests (`playwright/unit/recording.spec.ts`, 
 
 `.github/workflows/playwright.yml` runs two jobs on every push and pull request:
 
-1. **Unit, API, database, performance and accessibility tests**: fast, no credentials needed. A PostgreSQL 16 service container is started for the data-integrity tests.
+1. **Unit, API, database, dashboard, BDD, Postman and accessibility tests**: fast, no credentials needed. A PostgreSQL 16 service container is started for the data-integrity tests.
 2. **UI tests** on Chromium, Firefox, and WebKit, which run only after the API tests pass.
 
 Each job uploads its HTML report as a build artifact. The UI tests need these repository secrets under **Settings → Secrets and variables → Actions**:
@@ -392,6 +463,9 @@ Each job uploads its HTML report as a build artifact. The UI tests need these re
 - `BANK_PASSWORD`
 
 ## Running with Docker
+
+`.dockerignore` keeps `.env`, `node_modules` and local reports out of the image, and the container runs as the unprivileged `node` user.
+
 
 ```bash
 docker compose up --build        # dashboard + PostgreSQL run history
@@ -451,7 +525,8 @@ bank-login-automation/
 │   └── invalid-login-playwright.test.js
 ├── playwright/
 │   ├── pages/
-│   │   └── LoginPage.ts   # Typed Page Object for the login page
+│   │   ├── LoginPage.ts   # Typed Page Object for the login page
+│   │   └── RecorderPage.ts # Page Object for the Recorder
 │   ├── reporters/
 │   │   └── compliance-reporter.ts # Builds the compliance evidence report
 │   ├── support/
@@ -479,7 +554,8 @@ bank-login-automation/
 ├── db/
 │   └── schema.sql         # test_runs table
 ├── scripts/
-│   └── record.js          # npm run record: Codegen + clean-up
+│   ├── record.js          # npm run record: Codegen + clean-up
+│   └── run-postman.js     # npm run test:postman: Newman runner
 ├── docs/
 │   └── demo.gif           # Dashboard demo
 ├── .github/workflows/
@@ -492,6 +568,12 @@ bank-login-automation/
 │   └── app.js
 ├── compliance/
 │   └── requirements.json  # Requirement catalog: IDs, controls, risk
+├── features/              # BDD: Gherkin feature files
+│   ├── login.feature
+│   ├── recorder.feature
+│   └── steps/             # Step definitions + fixtures (TypeScript)
+├── postman/               # Postman collections, environment, CSV test data
+├── infra/                 # AWS CDK app, infrastructure tests, deploy guide
 ├── playwright.config.ts
 ├── merge.config.ts        # Merges CI jobs into one report
 ├── tsconfig.json

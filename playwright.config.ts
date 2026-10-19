@@ -7,6 +7,7 @@ import 'dotenv/config';
 import path from 'path';
 import os from 'os';
 import { defineConfig, devices } from '@playwright/test';
+import { defineBddProject } from 'playwright-bdd';
 
 // The API tests start the dashboard server on its own port so they never
 // collide with a copy you already have running on 3000.
@@ -84,6 +85,25 @@ export default defineConfig({
       name: 'dashboard',
       testMatch: 'dashboard/**/*.spec.ts',
       timeout: 90_000,
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: `http://localhost:${API_PORT}`,
+        launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined },
+      },
+    },
+    // BDD: Gherkin feature files in features/, step definitions in features/steps/.
+    // `npx bddgen` turns each scenario into a Playwright test (in .features-gen/) before a run.
+    {
+      ...defineBddProject({ name: 'bdd-login', features: 'features/login.feature', steps: 'features/steps/*.ts' }),
+      use: {
+        ...devices['Desktop Chrome'],
+        launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined },
+      },
+    },
+    {
+      ...defineBddProject({ name: 'bdd-recorder', features: 'features/recorder.feature', steps: 'features/steps/*.ts' }),
+      // The recorder handles one recording at a time, so wait for the other Recorder tests to finish.
+      dependencies: ['dashboard'],
       use: {
         ...devices['Desktop Chrome'],
         baseURL: `http://localhost:${API_PORT}`,

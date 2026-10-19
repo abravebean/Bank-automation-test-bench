@@ -1,0 +1,48 @@
+{
+  "info": {
+    "_postman_id": "5c21c1f6-ae1f-513f-96bc-7003cb505a7f",
+    "name": "Bank Test Bench API: malicious input (data-driven)",
+    "description": "Runs once per row of postman/data/malicious-names.csv: each payload is sent as a test name and must be rejected with the expected status. Run with `npm run test:postman`, or in Postman's Collection Runner with the CSV as the data file.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Malicious test name is rejected",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const expected = Number(pm.iterationData.get('expectedStatus'));",
+              "const kind = pm.iterationData.get('kind');",
+              "pm.test(`${kind}: returns ${expected}`, () => pm.response.to.have.status(expected));",
+              "pm.test(`${kind}: nothing ran (no NDJSON stream)`, () => {",
+              "  pm.expect(pm.response.headers.get('Content-Type') || '').to.not.match(/ndjson/);",
+              "});",
+              "pm.test(`${kind}: payload is not reflected as HTML`, () => {",
+              "  pm.expect(pm.response.headers.get('Content-Type') || '').to.match(/json/);",
+              "});"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/tests/{{payload}}/run",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "tests",
+            "{{payload}}",
+            "run"
+          ]
+        }
+      }
+    }
+  ]
+}

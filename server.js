@@ -283,6 +283,11 @@ app.post('/api/tests/run-all', async (req, res) => {
   res.end();
 });
 
+// Anything else under /api is a JSON 404, never Express's default HTML page.
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: `No API route for ${req.method} ${req.path}` });
+});
+
 db.init()
   .then((enabled) => console.log(enabled ? 'Run history: PostgreSQL connected' : 'Run history: disabled (no DATABASE_URL)'))
   .catch((err) => console.error('Database init failed, continuing without run history:', err.message))
