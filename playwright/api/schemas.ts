@@ -96,7 +96,7 @@ const notFoundSchema = {
   },
 };
 
-module.exports = {
+export {
   testListSchema,
   logEventSchema,
   resultEventSchema,

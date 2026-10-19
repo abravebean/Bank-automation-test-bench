@@ -1,31 +1,17 @@
 // API tests for the dashboard's Express REST API.
 // These run without a browser and without bank credentials, so they run on every CI build.
-const { test, expect } = require('@playwright/test');
-const Ajv = require('ajv');
-const {
+import { test, expect } from '@playwright/test';
+import {
   testListSchema,
   logEventSchema,
   resultEventSchema,
   notFoundSchema,
-} = require('./schemas');
-
-const ajv = new Ajv({ allErrors: true });
-
-function expectToMatchSchema(data, schema) {
-  const validate = ajv.compile(schema);
-  const valid = validate(data);
-  expect(valid, ajv.errorsText(validate.errors)).toBe(true);
-}
-
-function parseNdjson(text) {
-  return text
-    .split('\n')
-    .filter((line) => line.trim())
-    .map((line) => JSON.parse(line));
-}
+} from './schemas';
+import { expectToMatchSchema, parseNdjson } from '../support/schema';
+import type { LogEvent, ResultEvent, TestListItem } from '../support/api-types';
 
 test.describe('GET /api/tests', () => {
-  test('returns 200 with a JSON list that matches the contract', async ({ request }) => {
+  test('returns 200 with a JSON list that matches the contract', { tag: '@R4' }, async ({ request }) => {
     const res = await request.get('/api/tests');
 
     expect(res.status()).toBe(200);
@@ -33,8 +19,8 @@ test.describe('GET /api/tests', () => {
     expectToMatchSchema(await res.json(), testListSchema);
   });
 
-  test('lists every test exactly once, for both engines', async ({ request }) => {
-    const tests = await (await request.get('/api/tests')).json();
+  test('lists every test exactly once, for both engines', { tag: '@R4' }, async ({ request }) => {
+    const tests: TestListItem[] = await (await request.get('/api/tests')).json();
     const names = tests.map((t) => t.name);
 
     expect(new Set(names).size).toBe(names.length);
@@ -50,7 +36,7 @@ test.describe('GET /api/tests', () => {
     expect(tests.some((t) => t.engine === 'playwright')).toBe(true);
   });
 
-  test('responds quickly', async ({ request }) => {
+  test('responds quickly', { tag: '@R11' }, async ({ request }) => {
     const start = Date.now();
     await request.get('/api/tests');
     expect(Date.now() - start).toBeLessThan(1000);
@@ -58,7 +44,7 @@ test.describe('GET /api/tests', () => {
 });
 
 test.describe('POST /api/tests/:name/run', () => {
-  test('unknown test name returns 404 with an error body', async ({ request }) => {
+  test('unknown test name returns 404 with an error body', { tag: '@R5' }, async ({ request }) => {
     const res = await request.post('/api/tests/does-not-exist/run');
 
     expect(res.status()).toBe(404);
@@ -73,18 +59,18 @@ test.describe('POST /api/tests/:name/run', () => {
   ];
 
   for (const name of maliciousNames) {
-    test(`rejects malicious test name: ${name.slice(0, 40)}`, async ({ request }) => {
+    test(`rejects malicious test name: ${name.slice(0, 40)}`, { tag: '@R5' }, async ({ request }) => {
       const res = await request.post(`/api/tests/${name}/run`);
       expect(res.status()).toBe(404);
     });
   }
 
-  test('GET on a run endpoint is not allowed', async ({ request }) => {
+  test('GET on a run endpoint is not allowed', { tag: '@R5' }, async ({ request }) => {
     const res = await request.get('/api/tests/login/run');
     expect(res.status()).toBe(404);
   });
 
-  test('streams NDJSON events that end in a single result', async ({ request }) => {
+  test('streams NDJSON events that end in a single result', { tag: '@R6' }, async ({ request }) => {
     test.setTimeout(60_000);
     const res = await request.post('/api/tests/invalid-login-rejected-playwright/run', {
       timeout: 55_000,
@@ -94,12 +80,12 @@ test.describe('POST /api/tests/:name/run', () => {
     expect(res.headers()['content-type']).toContain('application/x-ndjson');
 
     const events = parseNdjson(await res.text());
-    const results = events.filter((e) => e.type === 'result');
-    const logs = events.filter((e) => e.type === 'log');
+    const results = events.filter((e): e is ResultEvent => e.type === 'result');
+    const logs = events.filter((e): e is LogEvent => e.type === 'log');
 
     // Exactly one result, and it is the last event in the stream.
     expect(results).toHaveLength(1);
-    expect(events.at(-1).type).toBe('result');
+    expect(events[events.length - 1]?.type).toBe('result');
     expectToMatchSchema(results[0], resultEventSchema);
     expect(results[0].name).toBe('invalid-login-rejected-playwright');
 

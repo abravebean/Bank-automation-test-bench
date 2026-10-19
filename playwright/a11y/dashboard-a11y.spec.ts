@@ -1,9 +1,10 @@
 // Accessibility tests for the dashboard, using axe-core against WCAG 2.1 A/AA rules,
 // plus a keyboard-only check that every control can be reached without a mouse.
-const { test, expect } = require('@playwright/test');
-const { AxeBuilder } = require('@axe-core/playwright');
+import { test, expect } from '@playwright/test';
+import { AxeBuilder } from '@axe-core/playwright';
+import { captureEvidence } from '../support/evidence';
 
-test.describe('Dashboard accessibility', () => {
+test.describe('Dashboard accessibility', { tag: '@R12' }, () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
     // Wait until the test list has rendered so axe scans the real page, not the loading state.
@@ -21,6 +22,7 @@ test.describe('Dashboard accessibility', () => {
     });
 
     const summary = results.violations.map((v) => `${v.id} (${v.impact}): ${v.nodes.length} element(s)`);
+    await captureEvidence(page, testInfo, `Tests page scanned: ${results.passes.length} rules passed, ${results.violations.length} violations`);
     expect(summary, summary.join('\n')).toEqual([]);
   });
 
@@ -48,12 +50,13 @@ test.describe('Dashboard accessibility', () => {
   });
 });
 
-test.describe('Recorder page accessibility', () => {
-  test('has no WCAG 2.1 A/AA violations before a recording starts', async ({ page }) => {
+test.describe('Recorder page accessibility', { tag: '@R12' }, () => {
+  test('has no WCAG 2.1 A/AA violations before a recording starts', async ({ page }, testInfo) => {
     await page.goto('/recorder.html');
     await expect(page.getByRole('button', { name: 'Start recording' })).toBeVisible();
     const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa']).analyze();
     const summary = results.violations.map((v) => `${v.id} (${v.impact}): ${v.nodes.length} element(s)`);
+    await captureEvidence(page, testInfo, `Recorder page scanned: ${results.passes.length} rules passed, ${results.violations.length} violations`);
     expect(summary, summary.join('\n')).toEqual([]);
   });
 });

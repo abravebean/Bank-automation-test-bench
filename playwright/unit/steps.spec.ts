@@ -1,8 +1,8 @@
 // Unit tests for lib/steps.js: Playwright code -> plain-English steps shown in the Recorder.
-const { test, expect } = require('@playwright/test');
-const { parseSteps, describeLocator } = require('../../lib/steps');
+import { test, expect } from '@playwright/test';
+import { parseSteps, describeLocator } from '../../lib/steps';
 
-test.describe('describeLocator', () => {
+test.describe('describeLocator', { tag: '@R14' }, () => {
   const cases = [
     ["page.getByRole('button', { name: 'Log in' })", 'button "Log in"'],
     ["page.getByRole('button', { name: 'Run login', exact: true })", 'button "Run login"'],
@@ -21,7 +21,7 @@ test.describe('describeLocator', () => {
   }
 });
 
-test('parses a full recording into numbered, typed steps', () => {
+test('parses a full recording into numbered, typed steps', { tag: '@R14' }, () => {
   const code = [
     "const { test, expect } = require('@playwright/test');",
     "test('x', async ({ page }) => {",
@@ -45,7 +45,7 @@ test('parses a full recording into numbered, typed steps', () => {
   ]);
 });
 
-test('ignores lines that are not steps', () => {
+test('ignores lines that are not steps', { tag: '@R14' }, () => {
   expect(parseSteps("// comment\nconst a = 1;\n});\n")).toEqual([]);
   expect(parseSteps('')).toEqual([]);
 });

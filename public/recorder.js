@@ -320,7 +320,7 @@ els.save.addEventListener('click', async () => {
     els.formError.textContent = '';
     await loadSaved();
     els.formError.textContent = '';
-    flash(`Saved ${name} to playwright/recorded/${name}.spec.js`);
+    flash(`Saved ${name} to playwright/recorded/${name}.spec.ts`);
   } catch (err) {
     els.saveMsg.className = 'rec-save-msg rec-save-err';
     els.saveMsg.textContent = err.message;

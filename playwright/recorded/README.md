@@ -1,6 +1,6 @@
 # Recorded tests
 
-Tests in this folder are created with `npm run record -- <test-name>`, which opens Playwright Codegen, records what you click and type as code, then cleans it up (see `scripts/record.js` and `lib/recording.js`).
+Tests in this folder (`.spec.ts`) are created with `npm run record -- <test-name>`, which opens Playwright Codegen, records what you click and type as code, then cleans it up (see `scripts/record.js` and `lib/recording.js`).
 
 Workflow:
 
