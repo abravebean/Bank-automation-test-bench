@@ -148,8 +148,11 @@
       </ul>
 
       <h2>What's being tested</h2>
-      <p class="section-note">A demo bank login flow and the tooling that tests it.</p>
+      <p class="section-note">Ledgerline, a fictional demo bank with accounts and transfers, and the tooling that tests it.</p>
       <ul class="stack">
+        <li>Banking rules: boundary values, daily limits, overdraft protection</li>
+        <li>Security: cross-account access (IDOR), lockout, session cookies</li>
+        <li>Ledger integrity and race conditions (no double spending)</li>
         <li>Playwright (TypeScript) and Selenium UI tests on Chromium, Firefox and WebKit</li>
         <li>BDD scenarios in Gherkin</li>
         <li>REST API contract tests with JSON Schema</li>

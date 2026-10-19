@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ledgerline (demo bank)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="bank.css" />
+</head>
+<body>
+  <p class="demo-banner">Ledgerline is a fictional demo bank for test automation. No real money or accounts.</p>
+
+  <!-- Sign in -->
+  <main id="view-login" class="login-view" hidden>
+    <div class="login-card">
+      <p class="brand"><span class="brand-mark" aria-hidden="true">L</span> Ledgerline</p>
+      <h1 class="login-title">Sign in to online banking</h1>
+      <form id="login-form" novalidate>
+        <label for="username">Username</label>
+        <input id="username" data-testid="input-username" name="username" autocomplete="username" required>
+        <label for="password">Password</label>
+        <input id="password" data-testid="input-password" name="password" type="password" autocomplete="current-password" required>
+        <div data-testid="alert-error" id="login-error" class="alert" role="alert" hidden></div>
+        <button type="submit" class="btn-primary"><span>Login</span></button>
+      </form>
+      <p class="hint">Demo customer: <code>demo_user</code> / <code>demo_pass</code></p>
+    </div>
+  </main>
+
+  <!-- Signed in -->
+  <div id="view-app" hidden>
+    <header class="topbar">
+      <a class="brand" href="#/accounts"><span class="brand-mark" aria-hidden="true">L</span> Ledgerline</a>
+      <span class="who" id="who"></span>
+      <button type="button" class="btn-quiet" data-testid="btn-logout" id="logout">Sign out</button>
+    </header>
+
+    <main class="page">
+      <!-- Accounts -->
+      <section id="view-accounts" hidden>
+        <h1 id="welcome" class="page-title">Welcome back</h1>
+        <p class="limit" id="limit"></p>
+        <ul class="accounts" id="accounts" aria-label="Your accounts"></ul>
+        <a class="btn-primary" href="#/transfer" data-testid="btn-transfer">Transfer money</a>
+      </section>
+
+      <!-- Transfer -->
+      <section id="view-transfer" hidden>
+        <a class="back" href="#/accounts">Back to accounts</a>
+        <h1 class="page-title">Transfer between your accounts</h1>
+        <form id="transfer-form" class="transfer-form" novalidate>
+          <label for="from">From</label>
+          <select id="from" name="fromAccountId" data-testid="transfer-from"></select>
+          <label for="to">To</label>
+          <select id="to" name="toAccountId" data-testid="transfer-to"></select>
+          <label for="amount">Amount</label>
+          <div class="money-input">
+            <span aria-hidden="true">$</span>
+            <input id="amount" name="amount" data-testid="transfer-amount" inputmode="decimal" autocomplete="off" placeholder="0.00" aria-describedby="transfer-error">
+          </div>
+          <label for="memo">Memo <span class="optional">(optional)</span></label>
+          <input id="memo" name="memo" data-testid="transfer-memo" maxlength="80">
+          <div class="alert" id="transfer-error" data-testid="transfer-error" role="alert" hidden></div>
+          <button type="submit" class="btn-primary" id="transfer-submit">Transfer</button>
+        </form>
+        <div class="receipt" id="transfer-success" data-testid="transfer-success" role="status" hidden></div>
+      </section>
+
+      <!-- History -->
+      <section id="view-history" hidden>
+        <a class="back" href="#/accounts">Back to accounts</a>
+        <h1 class="page-title" id="history-title">Account</h1>
+        <p class="balance-line" id="history-balance"></p>
+        <div class="table-wrap">
+          <table class="history" data-testid="history-table">
+            <caption class="sr-only">Transactions, newest first</caption>
+            <thead><tr><th scope="col">Date</th><th scope="col">Description</th><th scope="col" class="num">Amount</th><th scope="col" class="num">Balance</th></tr></thead>
+            <tbody id="history-rows"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

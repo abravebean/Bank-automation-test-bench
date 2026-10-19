@@ -6,13 +6,26 @@ const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
 const db = require('./lib/db');
+const { createBankRouter } = require('./lib/demo-bank/router');
 const { Recorder, listRecordings, readRecording, deleteRecording, existingFileFor, recordingsDir, BROWSERS, DEVICES } = require('./lib/recorder');
 
 const PORT = process.env.PORT || 3000;
+
+// No bank configured? Point the dashboard's tests at the built-in Ledgerline demo bank,
+// so a fresh clone works with no setup. A BANK_URL in .env always wins.
+if (!process.env.BANK_URL) {
+  process.env.BANK_URL = `http://localhost:${PORT}/bank/`;
+  process.env.BANK_USERNAME = 'demo_user';
+  process.env.BANK_PASSWORD = 'demo_pass';
+}
 const TESTS_DIR = path.join(__dirname, 'tests');
 const TEST_TIMEOUT_MS = 45000;
 
 const app = express();
+
+// Ledgerline: the fictional demo bank used as the system under test (http://localhost:3000/bank/).
+app.use('/bank', createBankRouter());
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Latest compliance evidence report (created by any Playwright run: npm run test:compliance).

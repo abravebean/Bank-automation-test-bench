@@ -4,7 +4,7 @@
 |---|---|
 | **Version** | 2.1 |
 | **Author** | Kevin Tran |
-| **System under test** | (1) Demo bank login flow, (2) the Test Bench dashboard and its REST API, (3) the PostgreSQL run history |
+| **System under test** | (1) Ledgerline, the built-in demo bank: sign-in, accounts, transfers, history; (2) an external demo bank login (optional); (3) the Test Bench dashboard and its REST API; (4) the PostgreSQL run history |
 
 ## 1. Objective
 
@@ -26,7 +26,7 @@ Make sure that a customer can log in and out of the demo bank, that bad credenti
 **Out of scope**
 
 - Multi-factor authentication flows (selector exists; scenario not yet automated)
-- Account features after login (balances, transfers)
+- Payments to other customers or external banks (Ledgerline only supports transfers between a customer's own accounts)
 - Load testing beyond 20 concurrent requests
 - Real banking sites. This project must only target a demo bank.
 
@@ -54,6 +54,11 @@ The same login scenarios exist in both Selenium and Playwright so the two framew
 
 | Risk | Impact | Likelihood | Priority | Covered by |
 |---|---|---|---|---|
+| Money moves to the wrong customer or out of someone else's account | High | Low | **P1** | `bank/bank-api.spec.ts` (IDOR), `unit/demo-bank.spec.ts` |
+| Overdraft or double spending under concurrent requests or double clicks | High | Medium | **P1** | `bank/bank-api.spec.ts` (concurrency, idempotency), `bank/bank-ui.spec.ts` |
+| Balances drift from the ledger (money created or lost) | High | Low | **P1** | `unit/demo-bank.spec.ts` (500 random transfers), `bank/bank-api.spec.ts` |
+| Amount or limit validation wrong at the boundaries | High | Medium | **P1** | Boundary tests in unit, API, UI and `transfer.feature` |
+| Brute-force sign-in or username discovery | High | Medium | **P1** | Lockout and enumeration tests |
 | Valid user cannot log in | High | Medium | **P1** | `login.spec.ts`, `login.test.js`, `login-playwright.test.js` |
 | Invalid credentials are accepted | High | Low | **P1** | `login.spec.ts`, `invalid-login*.test.js` |
 | Password shown in plain text | High | Low | **P1** | `login.spec.ts` (password masking) |
@@ -86,10 +91,19 @@ The requirement catalog lives in [`compliance/requirements.json`](compliance/req
 | R14 | Recorder works end to end | Functional | `dashboard/recorder.spec.ts`, `unit/steps.spec.ts` |
 | R15 | Recorder input validation, no path traversal | OWASP A01, A03 | `dashboard/recorder.spec.ts` |
 | R16 | Multi-factor challenge shown when required | OWASP A07 | **No automated test (known gap; see Scope)** |
+| R17 | Transfer amounts validated at their boundaries | Boundary value analysis | `unit/demo-bank.spec.ts`, `bank/bank-api.spec.ts`, `bank/bank-ui.spec.ts`, `transfer.feature` |
+| R18 | Balance and $2,500.00 daily limit enforced | Business rules | same as R17 |
+| R19 | Customers only see and move their own money | OWASP A01 (IDOR) | `bank/bank-api.spec.ts`, `bank/bank-ui.spec.ts` |
+| R20 | Lockout after 3 failures; no username enumeration | OWASP A07 | `unit/demo-bank.spec.ts`, `bank/bank-api.spec.ts`, `bank/bank-ui.spec.ts` |
+| R21 | Money never created or destroyed; ledgers reconcile | Ledger reconciliation | `unit/demo-bank.spec.ts`, `bank/bank-api.spec.ts` |
+| R22 | No double spending (idempotency, concurrency) | CWE-362 | `unit/demo-bank.spec.ts`, `bank/bank-api.spec.ts`, `bank/bank-ui.spec.ts` |
+| R23 | Secure session cookie; sign-out ends the session | CWE-1004, OWASP A07 | `bank/bank-api.spec.ts`, `bank/bank-ui.spec.ts` |
+| R24 | Bank pages meet WCAG 2.1 AA | WCAG 2.1 AA | `bank/bank-ui.spec.ts` |
 
 ## 6. Test data
 
 - **Login:** credentials come from environment variables / CI secrets, never from source code. Negative tests use obviously fake values.
+- **Bank:** every bank test creates its own customer through a test-only route, so balances, daily limits and lockout counters never leak between tests running in parallel. Time-based rules (lockout expiry, daily limit reset) use an injected clock.
 - **Database:** `run-history.spec.ts` seeds its own rows with a unique test name, asserts against them, and deletes them afterwards, so tests never depend on leftover data and can run in parallel.
 
 ## 7. Environments

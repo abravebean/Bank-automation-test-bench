@@ -31,7 +31,9 @@ test.describe('Recorder page', () => {
     await page.goto('/recorder.html');
 
     await page.getByLabel('Test name').fill(name);
-    await page.getByLabel('Start page').fill(FAKE_URL);
+    // Record from the configured start page (BANK_URL), which the cleanup swaps for process.env.BANK_URL.
+    const startUrl = await page.getByLabel('Start page').inputValue();
+    expect(startUrl).toMatch(/^https?:\/\//);
     await page.getByRole('button', { name: 'Start recording' }).click();
 
     // While recording: the REC stamp, a Stop button, and steps arriving one by one.
@@ -39,7 +41,7 @@ test.describe('Recorder page', () => {
     await expect(page.getByRole('button', { name: 'Stop recording' })).toBeVisible();
     await expect(page.getByLabel('Test name')).toBeDisabled();
     const steps = page.locator('#rec-steps li');
-    await expect(steps.first()).toHaveText(`Open "${FAKE_URL}"`);
+    await expect(steps.first()).toHaveText(`Open "${startUrl}"`);
 
     // When Codegen exits, the recording is cleaned and the Cleaned tab opens.
     await expect(page.getByLabel('Ready to review', { exact: true })).toBeVisible({ timeout: 15_000 });
@@ -51,14 +53,14 @@ test.describe('Recorder page', () => {
       'Check "alert-error" is visible',
     ]);
     await expect(page.locator('#rec-code')).toContainText('page.goto(process.env.BANK_URL)');
-    await expect(page.locator('#rec-code')).not.toContainText(FAKE_URL);
+    await expect(page.locator('#rec-code')).not.toContainText(startUrl);
     await expect(page.locator('#rec-report')).toContainText('Moved BANK_URL to .env (1 place)');
     await expect(page.locator('#rec-report')).toContainText('Removed 1 extra click before typing');
     await captureEvidence(page, testInfo, 'Cleaned recording: secrets moved to .env');
 
     // The raw tab still shows exactly what Codegen wrote.
     await page.getByRole('tab', { name: 'As recorded' }).click();
-    await expect(page.locator('#rec-code')).toContainText(FAKE_URL);
+    await expect(page.locator('#rec-code')).toContainText(startUrl);
 
     // Edit the cleaned code before saving.
     await page.getByRole('tab', { name: 'Cleaned' }).click();

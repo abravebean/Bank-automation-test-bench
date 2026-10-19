@@ -52,8 +52,8 @@ jobs:
       - name: Generate BDD tests from the feature files
         run: npx bddgen
 
-      - name: Run unit, API, database, dashboard, BDD & accessibility tests
-        run: npx playwright test --project=unit --project=api --project=a11y --project=dashboard --project=bdd-recorder
+      - name: Run unit, API, database, dashboard, demo bank, BDD & accessibility tests
+        run: npx playwright test --project=unit --project=api --project=a11y --project=dashboard --project=bdd-recorder --project=bank --project=bdd-bank
 
       - name: Run Postman collections (Newman)
         if: ${{ !cancelled() }}

@@ -10,9 +10,9 @@ Feature: Recording a test from the dashboard
     Given I open the Recorder
 
   Scenario: Recording, reviewing and saving a test
-    When I record a test named "bdd-invalid-login" starting at "https://demo-bank.example.com/login"
+    When I record a test named "bdd-invalid-login" from the configured start page
     Then each step appears as I click
-    And the finished code reads the URL from ".env" instead of hard-coding it
+    And the finished code reads the start page from ".env" instead of hard-coding it
     When I save the test
     Then the test is listed under saved recordings
     And I can delete it

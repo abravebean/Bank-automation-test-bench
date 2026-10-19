@@ -7,6 +7,13 @@ Given('I open the Recorder', async ({ recorderPage, request }) => {
   await recorderPage.goto();
 });
 
+When('I record a test named {string} from the configured start page', async ({ recorderPage, ctx }, name: string) => {
+  ctx.recordingName = `${name}-${Date.now().toString(36)}`;
+  ctx.startUrl = await recorderPage.urlField.inputValue(); // prefilled from BANK_URL
+  await recorderPage.startRecording(ctx.recordingName);
+  await expect(recorderPage.recordingStamp).toBeVisible();
+});
+
 When('I record a test named {string} starting at {string}', async ({ recorderPage, ctx }, name: string, url: string) => {
   // A unique suffix keeps reruns from colliding with a test saved by an earlier run.
   ctx.recordingName = `${name}-${Date.now().toString(36)}`;
@@ -29,9 +36,9 @@ Then('each step appears as I click', async ({ recorderPage }) => {
   ]);
 });
 
-Then('the finished code reads the URL from {string} instead of hard-coding it', async ({ recorderPage, page, $testInfo }, file: string) => {
+Then('the finished code reads the start page from {string} instead of hard-coding it', async ({ recorderPage, page, ctx, $testInfo }, file: string) => {
   await expect(recorderPage.code).toContainText('page.goto(process.env.BANK_URL)');
-  await expect(recorderPage.code).not.toContainText('demo-bank.example.com');
+  await expect(recorderPage.code).not.toContainText(ctx.startUrl!);
   await expect(recorderPage.cleanupReport).toContainText(`Moved BANK_URL to ${file}`);
   await captureEvidence(page, $testInfo, 'Cleaned recording ready to save');
 });

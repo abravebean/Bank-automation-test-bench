@@ -1,0 +1,193 @@
+/* Ledgerline (fictional demo bank). A calm, formal banking look: deep teal and brass on warm white. */
+:root {
+  --bg: #f7f5f0;
+  --surface: #ffffff;
+  --ink: #17262b;
+  --muted: #56666b;
+  --line: #dcd8cf;
+  --teal: #0e4d58;
+  --teal-dark: #093840;
+  --brass: #a77b2f;
+  --credit: #1f6b45;
+  --debit: #9d2f24;
+  --error-bg: #fbe9e6;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.5 "Public Sans", system-ui, sans-serif;
+}
+
+a { color: var(--teal); }
+:where(a, button, input, select):focus-visible { outline: 3px solid var(--brass); outline-offset: 2px; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+.demo-banner {
+  margin: 0;
+  padding: 6px 16px;
+  background: var(--ink);
+  color: #f1ede4;
+  font-size: 13px;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------- brand */
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 19px;
+  letter-spacing: 0.01em;
+  color: var(--teal);
+  text-decoration: none;
+  margin: 0;
+}
+.brand-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid var(--brass);
+  color: var(--brass);
+  font-size: 15px;
+}
+
+/* ---------------------------------------------------------------- forms */
+label { display: block; font-weight: 600; font-size: 14px; margin: 16px 0 6px; }
+.optional { font-weight: 400; color: var(--muted); }
+input, select {
+  width: 100%;
+  font: inherit;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid #b9b4a8;
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+input[aria-invalid="true"] { border-color: var(--debit); }
+
+.btn-primary {
+  display: inline-block;
+  margin-top: 22px;
+  padding: 11px 22px;
+  border: none;
+  border-radius: 6px;
+  background: var(--teal);
+  color: #fff;
+  font: 600 15px "Public Sans", system-ui, sans-serif;
+  text-decoration: none;
+  cursor: pointer;
+}
+.btn-primary:hover { background: var(--teal-dark); }
+.btn-primary:disabled { opacity: 0.55; cursor: default; }
+.btn-quiet {
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 7px 14px;
+  font: 500 14px "Public Sans", system-ui, sans-serif;
+  color: var(--ink);
+  cursor: pointer;
+}
+.btn-quiet:hover { border-color: var(--ink); }
+
+.alert {
+  margin-top: 16px;
+  padding: 10px 12px;
+  border-left: 4px solid var(--debit);
+  background: var(--error-bg);
+  color: #6e1f17;
+  font-size: 14px;
+}
+
+/* ---------------------------------------------------------------- sign in */
+.login-view { display: grid; place-items: start center; padding: 64px 16px; }
+.login-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--teal);
+  border-radius: 8px;
+  padding: 32px 28px 26px;
+}
+.login-title { font-size: 22px; font-weight: 600; margin: 18px 0 4px; }
+.login-card .btn-primary { width: 100%; }
+.hint { margin: 18px 0 0; font-size: 13px; color: var(--muted); }
+.hint code, .receipt code { font-family: "IBM Plex Mono", monospace; }
+
+/* ---------------------------------------------------------------- app shell */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 24px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+}
+.who { margin-left: auto; color: var(--muted); font-size: 14px; }
+.page { max-width: 760px; margin: 0 auto; padding: 36px 20px 80px; }
+.page-title { font-size: 28px; font-weight: 600; margin: 0 0 6px; letter-spacing: -0.01em; }
+.back { display: inline-block; margin-bottom: 14px; font-size: 14px; }
+.limit, .balance-line { color: var(--muted); margin: 0 0 22px; }
+
+/* ---------------------------------------------------------------- accounts */
+.accounts { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.account {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 16px;
+  padding: 18px 6px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  text-decoration: none;
+}
+.account:hover .acct-name { text-decoration: underline; }
+.acct-name { font-weight: 600; }
+.acct-number { grid-column: 1; color: var(--muted); font: 14px "IBM Plex Mono", monospace; }
+.acct-balance { grid-row: 1 / span 2; grid-column: 2; align-self: center; font: 600 22px "IBM Plex Mono", monospace; }
+
+/* ---------------------------------------------------------------- transfer */
+.transfer-form { max-width: 440px; }
+.money-input { display: flex; align-items: center; gap: 8px; }
+.money-input span { font-weight: 600; color: var(--muted); }
+.money-input input { font-family: "IBM Plex Mono", monospace; }
+.receipt {
+  max-width: 480px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--credit);
+  border-radius: 8px;
+  padding: 22px 24px;
+}
+.receipt h2 { margin: 0 0 12px; font-size: 20px; color: var(--credit); }
+.receipt dl { margin: 0; }
+.receipt dl div { display: grid; grid-template-columns: 110px 1fr; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.receipt dt { color: var(--muted); }
+.receipt dd { margin: 0; }
+
+/* ---------------------------------------------------------------- history */
+.table-wrap { overflow-x: auto; }
+.history { width: 100%; border-collapse: collapse; font-size: 14px; background: var(--surface); }
+.history th, .history td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.history th { font-weight: 600; color: var(--muted); }
+.history .num { text-align: right; font-family: "IBM Plex Mono", monospace; white-space: nowrap; }
+.history .credit { color: var(--credit); }
+.history .debit { color: var(--debit); }
+
+@media (max-width: 560px) {
+  .topbar { padding: 12px 16px; flex-wrap: wrap; }
+  .page-title { font-size: 24px; }
+  .acct-balance { font-size: 18px; }
+}

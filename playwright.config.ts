@@ -13,6 +13,14 @@ import { defineBddProject } from 'playwright-bdd';
 // collide with a copy you already have running on 3000.
 const API_PORT = process.env.API_TEST_PORT || 3199;
 
+// The login specs run against BANK_URL. Without one (no .env, no CI secret), they use the
+// built-in Ledgerline demo bank and its demo customer, so they still run instead of skipping.
+if (!process.env.BANK_URL) {
+  process.env.BANK_URL = `http://localhost:${API_PORT}/bank/`;
+  process.env.BANK_USERNAME = 'demo_user';
+  process.env.BANK_PASSWORD = 'demo_pass';
+}
+
 export default defineConfig({
   testDir: './playwright',
   timeout: 45_000,
@@ -50,6 +58,8 @@ export default defineConfig({
       // and save into a temp folder so they never touch playwright/recorded/.
       RECORDER_FAKE_CODEGEN: path.join(__dirname, 'playwright', 'fixtures', 'fake-codegen.js'),
       FAKE_CODEGEN_STEP_MS: '400',
+      // Lets bank tests create their own isolated customers (never enabled outside tests).
+      DEMO_BANK_TEST_HOOKS: 'true',
       RECORDINGS_DIR: path.join(os.tmpdir(), `testbench-recordings-${API_PORT}`),
     },
     reuseExistingServer: !process.env.CI,
@@ -71,6 +81,16 @@ export default defineConfig({
       name: 'api',
       testMatch: 'api/**/*.spec.ts',
       use: { baseURL: `http://localhost:${API_PORT}` },
+    },
+    {
+      // Ledgerline demo bank: business rules, security, integrity (API) and transfer flows (UI).
+      name: 'bank',
+      testMatch: 'bank/**/*.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: `http://localhost:${API_PORT}`,
+        launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined },
+      },
     },
     {
       name: 'a11y',
@@ -97,6 +117,14 @@ export default defineConfig({
       ...defineBddProject({ name: 'bdd-login', features: 'features/login.feature', steps: 'features/steps/*.ts' }),
       use: {
         ...devices['Desktop Chrome'],
+        launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined },
+      },
+    },
+    {
+      ...defineBddProject({ name: 'bdd-bank', features: 'features/transfer.feature', steps: 'features/steps/*.ts' }),
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: `http://localhost:${API_PORT}`,
         launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined },
       },
     },
