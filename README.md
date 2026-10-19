@@ -12,6 +12,8 @@
 ![AWS](https://img.shields.io/badge/AWS-CDK-232F3E?logo=amazonwebservices&logoColor=white)
 ![Tests](https://github.com/abravebean/Bank-automation-test-bench/actions/workflows/playwright.yml/badge.svg)
 
+**[Live test results →](https://abravebean.github.io/Bank-automation-test-bench/)** rebuilt by CI on every push to main: compliance evidence, API and security reports.
+
 An end-to-end test automation suite for a demo bank login flow, built with **both Selenium WebDriver and Playwright**. It covers UI, API, database, performance and accessibility testing:
 
 1. **A web dashboard** (Express + vanilla JS) that runs Selenium and Playwright tests side by side with one click and streams each test's steps live.

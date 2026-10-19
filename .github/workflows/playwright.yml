@@ -141,6 +141,10 @@ jobs:
     env:
       # Only the host is printed in the report, never the full URL or any credentials.
       BANK_URL: ${{ secrets.BANK_URL }}
+      # Not used to log in: the reporter needs the values so it can blank them out of
+      # step titles (Fill "...") before the report is published.
+      BANK_USERNAME: ${{ secrets.BANK_USERNAME }}
+      BANK_PASSWORD: ${{ secrets.BANK_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
 
@@ -234,3 +238,45 @@ jobs:
 
       - name: Synthesize CloudFormation (no AWS account needed)
         run: npx cdk synth -c allowedCidrs=203.0.113.7/32 --quiet
+
+  # Live test results on GitHub Pages: https://abravebean.github.io/Bank-automation-test-bench/
+  # Publishes the compliance report and the Postman reports (no traces: they would contain typed values).
+  pages:
+    name: Publish live test results (GitHub Pages)
+    if: ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    needs: [api, compliance]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download the compliance report
+        uses: actions/download-artifact@v4
+        with:
+          name: compliance-report
+          path: _site/compliance
+
+      - name: Download the Postman reports
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: postman-report
+          path: _site/api
+
+      - name: Add the landing page
+        run: cp site/index.html _site/index.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deploy
+        uses: actions/deploy-pages@v4
+
