@@ -39,7 +39,8 @@ test.describe('Dashboard accessibility', { tag: '@R12' }, () => {
 
     // Tab from the top of the page and record which buttons receive focus.
     const focused = new Set();
-    for (let i = 0; i < count + 5; i++) {
+    // Enough presses to pass the nav, Run all and the filter, then every Run button.
+    for (let i = 0; i < count * 2 + 20; i++) {
       await page.keyboard.press('Tab');
       const label = await page.evaluate(() => document.activeElement?.getAttribute('aria-label'));
       if (label) focused.add(label);

@@ -269,8 +269,8 @@ jobs:
           name: postman-report
           path: _site/api
 
-      - name: Add the landing page
-        run: cp site/index.html _site/index.html
+      - name: Add the landing page and its images
+        run: cp site/index.html docs/demo.gif docs/demo-bank.png _site/
 
       - uses: actions/upload-pages-artifact@v3
         with:

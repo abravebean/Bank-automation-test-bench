@@ -11,6 +11,7 @@ const IMPLICIT_WAIT_MS = 10000;
 module.exports = {
   name: 'login',
   engine: 'selenium',
+  area: 'Login',
   description: 'Logs in with valid credentials and confirms the welcome screen appears.',
   async run(log) {
     if (!BANK_URL || !USERNAME || !PASSWORD) {

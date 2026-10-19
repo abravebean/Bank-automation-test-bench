@@ -11,6 +11,9 @@ const { Recorder, listRecordings, readRecording, deleteRecording, existingFileFo
 
 const PORT = process.env.PORT || 3000;
 
+// The built-in Ledgerline demo bank, always on this server (used by the Banking dashboard tests).
+process.env.LEDGERLINE_URL = `http://localhost:${PORT}/bank/`;
+
 // No bank configured? Point the dashboard's tests at the built-in Ledgerline demo bank,
 // so a fresh clone works with no setup. A BANK_URL in .env always wins.
 if (!process.env.BANK_URL) {
@@ -65,10 +68,11 @@ app.get('/api/health', async (req, res) => {
 });
 
 app.get('/api/tests', (req, res) => {
-  const tests = loadTests().map(({ name, description, engine }) => ({
+  const tests = loadTests().map(({ name, description, engine, area }) => ({
     name,
     description,
     engine: engine || 'selenium',
+    area: area || 'Other',
   }));
   res.json(tests);
 });

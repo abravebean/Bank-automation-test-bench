@@ -220,22 +220,29 @@ PORT=3000
 
 ## Using the Dashboard
 
-- Every test in `/tests` is listed with its name, an engine badge (**Selenium** or **Playwright**), its description, and a **Run** button.
-- **Run all tests** at the top executes the full suite.
-- After each run, the result appears next to the test:
-  - each step, streamed live as the test runs
-  - ✅ / ❌ pass or fail
-  - the message returned (or the error thrown)
-  - how long the test took
+![Dashboard: summary row, tests grouped by area, run history marks, and a live transfer test](docs/demo.gif)
+
+- **Summary row:** number of tests, how many pass on their latest run, the overall pass rate and any flaky tests (a test that has both passed and failed). Pass rate and flakiness come from PostgreSQL run history.
+- **Tests grouped by area** (Login, Banking), each with an engine tag (**Selenium** or **Playwright**), its description, and a **Run** button.
+- **Run history per test:** the last 10 runs as ✓/✗ marks (oldest first, hover for time and duration), plus pass rate and average duration.
+- **Run all tests** shows a progress bar; tests waiting their turn say *Queued* until they start.
+- **Engine filter:** show all tests, only Selenium, or only Playwright.
+- While a test runs, each step streams in live; the result is stamped ✓ PASS / ✗ FAIL with the message and duration.
+
+Without `DATABASE_URL`, everything works except the pass-rate, flaky and history parts, which say how to turn them on.
 
 ### Included tests
 
-| File                               | Engine     | What it checks                                         |
-| ---------------------------------- | ---------- | ------------------------------------------------------ |
-| `login.test.js`                    | Selenium   | A user with valid credentials can log in and log out.  |
-| `invalid-login.test.js`            | Selenium   | Invalid credentials show an error.                     |
-| `login-playwright.test.js`         | Playwright | A user with valid credentials can log in and log out.  |
-| `invalid-login-playwright.test.js` | Playwright | Invalid credentials show an error and no welcome page. |
+| File | Area | Engine | What it checks |
+| --- | --- | --- | --- |
+| `login.test.js` | Login | Selenium | A user with valid credentials can log in and log out. |
+| `invalid-login.test.js` | Login | Selenium | Invalid credentials show an error. |
+| `login-playwright.test.js` | Login | Playwright | A user with valid credentials can log in and log out. |
+| `invalid-login-playwright.test.js` | Login | Playwright | Invalid credentials show an error and no welcome page. |
+| `transfer-playwright.test.js` | Banking | Playwright | A $10.00 transfer shows a receipt and both balances change by exactly $10.00. |
+| `overdraft-blocked-playwright.test.js` | Banking | Playwright | A transfer larger than the balance is refused and nothing moves. |
+
+Banking tests always run against the built-in Ledgerline bank; Login tests use `BANK_URL` (Ledgerline when it isn't set). Each test exports an `area`, which the dashboard groups by and `GET /api/tests` returns as part of its JSON contract.
 
 ## Playwright Test Suite
 
@@ -575,12 +582,13 @@ The image installs the system Chromium and points both Selenium and Playwright a
 
 ## Writing a New Test
 
-Create a file in `/tests` ending in `.test.js` and export this shape (set `engine` to `'selenium'` or `'playwright'`):
+Create a file in `/tests` ending in `.test.js` and export this shape (set `engine` to `'selenium'` or `'playwright'`, and `area` to the dashboard group):
 
 ```js
 module.exports = {
   name: 'my-new-test',
   engine: 'playwright',
+  area: 'Banking',
   description: 'What this test checks.',
   async run(log) {
     // Selenium:   lib/driver.js + lib/selectors.js

@@ -6,35 +6,76 @@
   <title>Test Bench</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@500;600&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="wrap">
+  <div class="wrap wrap-mid">
     <header>
       <nav class="site-nav" aria-label="Main">
         <a href="/" aria-current="page">Tests</a>
         <a href="/recorder.html">Recorder</a>
         <a href="/compliance/">Compliance report</a>
+        <a href="/bank/">Ledgerline bank</a>
       </nav>
       <h1>Test Bench</h1>
-      <p class="sub">Selenium and Playwright checks against the demo bank login.</p>
-      <button id="run-all" class="run-all">Run all tests</button>
+      <p class="sub">Selenium and Playwright checks against the Ledgerline demo bank. Run one test or the whole suite and watch each step as it happens.</p>
     </header>
 
     <main>
+      <section class="kpis" aria-label="Summary">
+        <div class="kpi">
+          <span class="kpi-label">Tests</span>
+          <span class="kpi-value" id="kpi-tests">–</span>
+          <span class="kpi-note" id="kpi-tests-note"></span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-label">Latest results</span>
+          <span class="kpi-value" id="kpi-latest">–</span>
+          <span class="kpi-note" id="kpi-latest-note"></span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-label">Pass rate</span>
+          <span class="kpi-value" id="kpi-rate">–</span>
+          <span class="kpi-note" id="kpi-rate-note"></span>
+        </div>
+        <div class="kpi">
+          <span class="kpi-label">Flaky tests</span>
+          <span class="kpi-value" id="kpi-flaky">–</span>
+          <span class="kpi-note" id="kpi-flaky-note"></span>
+        </div>
+      </section>
+
+      <div class="toolbar">
+        <button id="run-all" class="run-all" type="button">Run all tests</button>
+        <div class="filter" role="group" aria-label="Show tests for">
+          <button type="button" data-engine="all" aria-pressed="true">All</button>
+          <button type="button" data-engine="selenium" aria-pressed="false">Selenium</button>
+          <button type="button" data-engine="playwright" aria-pressed="false">Playwright</button>
+        </div>
+      </div>
+
+      <div id="progress" class="progress" hidden>
+        <div class="progress-text" id="progress-text" role="status"></div>
+        <div class="progress-track" role="progressbar" id="progress-bar" aria-label="Run all tests" aria-valuemin="0" aria-valuemax="0" aria-valuenow="0">
+          <span class="progress-fill" id="progress-fill"></span>
+        </div>
+      </div>
+
       <section id="test-list" aria-label="Tests">
         <p class="loading">Loading tests…</p>
       </section>
 
       <section id="history" class="history" hidden>
         <h2>Recent runs</h2>
-        <table>
-          <thead>
-            <tr><th scope="col">Time</th><th scope="col">Test</th><th scope="col">Result</th><th scope="col">Duration</th></tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr><th scope="col">Time</th><th scope="col">Test</th><th scope="col">Result</th><th scope="col" class="num">Duration</th></tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
       </section>
     </main>
   </div>
