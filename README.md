@@ -12,28 +12,63 @@
 ![AWS](https://img.shields.io/badge/AWS-CDK-232F3E?logo=amazonwebservices&logoColor=white)
 ![Tests](https://github.com/abravebean/Bank-automation-test-bench/actions/workflows/playwright.yml/badge.svg)
 
-**[Live test results →](https://abravebean.github.io/Bank-automation-test-bench/)** rebuilt by CI on every push to main: compliance evidence, API and security reports.
+A QA automation portfolio project: a demo bank's login flow tested at every layer (UI, API, database, security, accessibility, performance), with audit-ready compliance evidence generated on every commit.
 
-An end-to-end test automation suite for a demo bank login flow, built with **both Selenium WebDriver and Playwright**. It covers UI, API, database, performance and accessibility testing:
+**[▶ Live test results](https://abravebean.github.io/Bank-automation-test-bench/)**: rebuilt by CI on every push to `main`.
 
-1. **A web dashboard** (Express + vanilla JS) that runs Selenium and Playwright tests side by side with one click and streams each test's steps live.
-2. **A Playwright Test suite** using the Page Object Model, run cross-browser (Chromium, Firefox, WebKit) locally and in **GitHub Actions CI**, with HTML reports, traces, screenshots, and video on failure.
-3. **API tests** for the dashboard's REST API: status codes, JSON Schema contract validation, NDJSON streaming, and malicious-input handling. They run first in CI.
-4. **PostgreSQL run history** with **SQL data-integrity tests** that check the API against the database, the system of record.
-5. **Performance tests** (p50/p95 latency) and **accessibility tests** (axe-core, WCAG 2.1 AA).
-6. **A test recorder** with its own page in the dashboard: click through the bank site and watch each step appear live as plain English and Playwright code (Codegen). Secrets are moved to `.env` automatically, and you can review, edit, save and run recordings without leaving the browser.
+![Dashboard running a test, then the Recorder turning clicks into code and moving secrets to .env](docs/demo.gif)
 
-7. **A compliance evidence report**: every test is linked to a requirement and a control (OWASP, WCAG, CWE). Each run produces an audit-ready report with the traceability matrix, step-by-step evidence, screenshots, coverage gaps and SHA-256 integrity hashes.
+## At a glance
 
-8. **Postman collections** run with **Newman**: chained API requests with test scripts, plus a data-driven security collection fed by a CSV of attack payloads.
-9. **BDD scenarios** in Gherkin (`Given / When / Then`) for the login flow and the Recorder, with Cucumber-style step definitions on the Page Objects.
-10. **AWS deployment** as code (CDK, TypeScript): Fargate behind a load balancer, private RDS PostgreSQL, Secrets Manager, with infrastructure tests and post-deploy smoke tests.
+| | |
+| --- | --- |
+| **Automated checks** | 68 Playwright tests (74 runs across Chromium, Firefox and WebKit), 60 Postman assertions, 13 infrastructure tests |
+| **Test types** | UI end-to-end, BDD (Gherkin), REST API contracts, SQL data integrity, security (injection, path traversal), accessibility (WCAG 2.1 AA), performance (p95), infrastructure |
+| **Traceability** | 16 requirements, each mapped to a control (OWASP Top 10, WCAG, CWE) and linked to the tests that prove it |
+| **CI/CD** | GitHub Actions, 6 jobs on every push: tests, Docker build, infrastructure checks, merged compliance report, publish to Pages |
+| **Stack** | TypeScript, JavaScript, Playwright, Selenium, Postman/Newman, PostgreSQL, Docker, AWS CDK |
 
-The Playwright suite is written in **TypeScript** (strict mode, type-checked in CI). The scope, risks and test strategy are in the **[Test Plan](TEST_PLAN.md)**.
+## Where to look first
+
+| If you want to see… | Open |
+| --- | --- |
+| Requirements traced to tests, with evidence | [Live compliance report](https://abravebean.github.io/Bank-automation-test-bench/compliance/) · [`compliance/requirements.json`](compliance/requirements.json) |
+| Test strategy and risk-based priorities | [`TEST_PLAN.md`](TEST_PLAN.md) |
+| Page Object Model in TypeScript | [`playwright/pages/LoginPage.ts`](playwright/pages/LoginPage.ts) · [`playwright/specs/login.spec.ts`](playwright/specs/login.spec.ts) |
+| API tested against the database with SQL | [`playwright/api/run-history.spec.ts`](playwright/api/run-history.spec.ts) |
+| BDD scenarios | [`features/login.feature`](features/login.feature) |
+| Data-driven security tests | [`postman/data/malicious-names.csv`](postman/data/malicious-names.csv) |
+| The CI pipeline | [`.github/workflows/playwright.yml`](.github/workflows/playwright.yml) |
+
+## Bugs this project caught
+
+Tests are only useful if they find problems. These were found while building the suite, and each one is now covered by a test or a check:
+
+| Found by | Problem | Fix |
+| --- | --- | --- |
+| Accessibility test (keyboard) | Every per-test button was labeled just "Run", so a screen reader heard "Run, Run, Run" | Unique labels ("Run login") |
+| Accessibility test (axe-core) | An Edit button sat inside a tab list, which breaks screen-reader navigation | Moved outside the tab list |
+| Accessibility test (axe-core) | The code panel scrolled but couldn't be reached with a keyboard | Made focusable |
+| Postman collection | Unknown `/api` routes returned an HTML error page instead of JSON | JSON 404 for all unknown API routes |
+| TypeScript strict mode | Login tests could pass an undefined `BANK_URL` to `page.goto()` | Explicit checks and skips |
+| Security review | No `.dockerignore`, so `docker build` would copy `.env` (bank credentials) into the image | `.dockerignore`, non-root container |
+| Security review | Typed passwords appeared in step titles of the public compliance report | Secrets redacted before writing, with unit tests |
+| Test review | Listing tests (`--list`) overwrote the compliance report with "not run" | Report is only written when tests actually ran |
 
 > ⚠️ This project targets a **demo bank only**. It is not intended for, and should never be pointed at, a real banking site or real account.
 
-![Dashboard running the test suite](docs/demo.gif)
+## What's inside
+
+1. **A web dashboard** (Express + vanilla JS) that runs Selenium and Playwright tests side by side with one click and streams each test's steps live.
+2. **A Playwright Test suite** in TypeScript using the Page Object Model, run cross-browser in **GitHub Actions**, with HTML reports, traces, screenshots and video on failure.
+3. **API tests** for the dashboard's REST API: status codes, JSON Schema contracts, NDJSON streaming, malicious input.
+4. **PostgreSQL run history** with **SQL data-integrity tests** that check the API against the database, the system of record.
+5. **Performance tests** (p50/p95 latency) and **accessibility tests** (axe-core, WCAG 2.1 AA).
+6. **A test recorder** in the dashboard: click through the bank site and each step appears live as plain English and Playwright code (Codegen). Secrets are moved to `.env` automatically.
+7. **A compliance evidence report**: requirements → controls → tests → steps → screenshots, with coverage gaps and SHA-256 integrity hashes.
+8. **Postman collections** run with **Newman**: chained requests plus a data-driven security collection.
+9. **BDD scenarios** in Gherkin with Cucumber-style step definitions on the Page Objects.
+10. **AWS infrastructure as code** (CDK, TypeScript) with its own tests, validated in CI (not kept running, to avoid cost).
 
 ---
 
@@ -453,12 +488,29 @@ The clean-up logic has its own unit tests (`playwright/unit/recording.spec.ts`, 
 
 ## Continuous Integration
 
-`.github/workflows/playwright.yml` runs two jobs on every push and pull request:
+`.github/workflows/playwright.yml` runs on every push and pull request:
 
-1. **Unit, API, database, dashboard, BDD, Postman and accessibility tests**: fast, no credentials needed. A PostgreSQL 16 service container is started for the data-integrity tests.
-2. **UI tests** on Chromium, Firefox, and WebKit, which run only after the API tests pass.
+```mermaid
+flowchart LR
+    push([Push / PR]) --> api[Unit · API · DB · dashboard<br/>BDD · Postman · a11y<br/><i>Postgres service</i>]
+    push --> docker[Docker build<br/>+ Postman vs. container]
+    push --> infra[CDK tests<br/>+ cdk synth]
+    api --> ui[UI tests<br/>Chromium · Firefox · WebKit<br/>+ BDD login]
+    api --> merge[Merge results<br/>compliance report]
+    ui --> merge
+    merge --> pages[Publish to<br/>GitHub Pages<br/><i>main only</i>]
+```
 
-Each job uploads its HTML report as a build artifact. The UI tests need these repository secrets under **Settings → Secrets and variables → Actions**:
+| Job | What it does |
+| --- | --- |
+| **Unit, API, database, dashboard, BDD, Postman and accessibility tests** | Type-checks, then runs everything that needs no bank credentials, against a throwaway PostgreSQL 16 service container. Runs the Postman collections with Newman. |
+| **UI tests** | Login specs and BDD login scenarios on Chromium, Firefox and WebKit. Runs only after the first job passes. |
+| **Docker image** | Builds the image, starts it, and runs the Postman collections against the running container. |
+| **AWS infrastructure** | Infrastructure tests and a full `cdk synth`. No AWS account needed. |
+| **Compliance evidence report** | Merges both test jobs' results into one report and posts a summary on the run page. Runs even when tests fail. |
+| **Publish live test results** | On `main`, publishes the compliance and Postman reports to [GitHub Pages](https://abravebean.github.io/Bank-automation-test-bench/). |
+
+The UI tests need these repository secrets under **Settings → Secrets and variables → Actions** (without them they're reported as "not run"):
 
 - `BANK_URL`
 - `BANK_USERNAME`
