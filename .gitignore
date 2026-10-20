@@ -10,3 +10,5 @@ compliance-report/
 all-blob-reports/
 reports/
 .features-gen/
+
+site/dist/

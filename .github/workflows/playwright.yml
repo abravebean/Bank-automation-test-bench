@@ -52,8 +52,8 @@ jobs:
       - name: Generate BDD tests from the feature files
         run: npx bddgen
 
-      - name: Run unit, API, database, dashboard, demo bank, BDD & accessibility tests
-        run: npx playwright test --project=unit --project=api --project=a11y --project=dashboard --project=bdd-recorder --project=bank --project=bdd-bank
+      - name: Run unit, API, database, dashboard, demo bank, BDD, accessibility & live-site tests
+        run: npx playwright test --project=unit --project=api --project=a11y --project=dashboard --project=bdd-recorder --project=bank --project=bdd-bank --project=site
 
       - name: Run Postman collections (Newman)
         if: ${{ !cancelled() }}
@@ -239,12 +239,84 @@ jobs:
       - name: Synthesize CloudFormation (no AWS account needed)
         run: npx cdk synth -c allowedCidrs=203.0.113.7/32 --quiet
 
+  # Load test: JMeter drives 25 virtual users for 60 s against a fresh Ledgerline, then
+  # scripts/load-check.js holds the run to the budgets in performance/thresholds.json.
+  load:
+    name: Load test (JMeter)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      JMETER_VERSION: 5.6.3
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install the app (runtime dependencies only)
+        env:
+          CHROMEDRIVER_SKIP_DOWNLOAD: 'true'
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+        run: npm ci --omit=dev --no-audit --no-fund
+
+      - name: Cache JMeter
+        id: jmeter-cache
+        uses: actions/cache@v4
+        with:
+          path: apache-jmeter-${{ env.JMETER_VERSION }}
+          key: jmeter-${{ env.JMETER_VERSION }}
+
+      - name: Download JMeter
+        if: steps.jmeter-cache.outputs.cache-hit != 'true'
+        run: curl -sSfL "https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-${JMETER_VERSION}.tgz" | tar -xz
+
+      - name: Start Ledgerline and record the money it holds
+        run: |
+          DEMO_BANK_TEST_HOOKS=true PORT=3000 nohup node server.js > ledgerline.log 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:3000/api/health > /dev/null && break; sleep 1; done
+          before=$(curl -sf http://localhost:3000/bank/api/test/integrity | node -pe 'JSON.parse(require("fs").readFileSync(0)).totalHoldingsCents')
+          echo "HOLDINGS_BEFORE=$before" >> "$GITHUB_ENV"
+
+      - name: Run JMeter (25 users, 20 s ramp-up, 60 s)
+        run: |
+          mkdir -p load-results
+          "apache-jmeter-${JMETER_VERSION}/bin/jmeter" -n -t performance/ledgerline-load.jmx \
+            -Jusers=25 -Jrampup=20 -Jduration=60 \
+            -l load-results/results.jtl -j load-results/jmeter.log -e -o load-results/report
+
+      - name: Check the budgets (latency, errors, throughput, money conservation)
+        run: |
+          node scripts/load-check.js load-results/results.jtl --base http://localhost:3000 \
+            --holdings-before "$HOLDINGS_BEFORE" --json load-results/report/summary.json | tee load-results/summary.md
+          exit ${PIPESTATUS[0]}
+
+      - name: Job summary
+        if: always()
+        run: grep -v '^::' load-results/summary.md >> "$GITHUB_STEP_SUMMARY" || echo "No load-test summary (see the JMeter log)" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the JMeter report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: load-report
+          path: |
+            load-results/report
+            load-results/jmeter.log
+          retention-days: 30
+
   # Live test results on GitHub Pages: https://abravebean.github.io/Bank-automation-test-bench/
   # Publishes the compliance report and the Postman reports (no traces: they would contain typed values).
   pages:
     name: Publish live test results (GitHub Pages)
     if: ${{ !cancelled() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
-    needs: [api, compliance]
+    needs: [api, compliance, load]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -269,8 +341,24 @@ jobs:
           name: postman-report
           path: _site/api
 
-      - name: Add the landing page and its images
-        run: cp site/index.html docs/demo.gif docs/demo-bank.png _site/
+      - name: Download the JMeter load-test report
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          name: load-report
+          path: _site/load-artifact
+
+      - name: Put the JMeter dashboard at /load/
+        run: |
+          if [ -d _site/load-artifact/report ]; then mv _site/load-artifact/report _site/load; fi
+          rm -rf _site/load-artifact
+
+      # The playground runs Ledgerline's real rules engine (lib/demo-bank/bank.js) in the visitor's browser.
+      - name: Build the playground engine
+        run: npx --yes esbuild@0.23.1 lib/demo-bank/bank.js --bundle --format=iife --global-name=LedgerlineEngine --alias:crypto=./site/src/crypto-shim.js --platform=browser --target=es2020 --outfile=_site/ledgerline-engine.js
+
+      - name: Add the landing page, requirement catalog and images
+        run: cp site/index.html compliance/requirements.json docs/demo.gif docs/demo-bank.png _site/
 
       - uses: actions/upload-pages-artifact@v3
         with:

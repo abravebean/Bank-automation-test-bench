@@ -1,0 +1,9 @@
+{
+  "$comment": "Pass/fail budget for the JMeter run, checked by scripts/load-check.js. Generous enough for a shared CI runner, tight enough to catch a real regression (e.g. an O(n^2) history query).",
+  "maxErrorRatePct": 1,
+  "p95Ms": {
+    "default": 300,
+    "Transfer $1.00": 400
+  },
+  "minRequestsPerSecond": 20
+}

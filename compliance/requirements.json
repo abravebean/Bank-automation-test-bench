@@ -169,6 +169,13 @@
       "category": "Accessibility",
       "control": "WCAG 2.1 Level AA",
       "risk": "P2"
+    },
+    {
+      "id": "R25",
+      "title": "The public results page shows the latest CI result and its playground enforces the same bank rules",
+      "category": "Reporting",
+      "control": "Functional; WCAG 2.1 Level AA",
+      "risk": "P3"
     }
   ]
 }
