@@ -12,6 +12,7 @@ import { defineBddProject } from 'playwright-bdd';
 // The API tests start the dashboard server on its own port so they never
 // collide with a copy you already have running on 3000.
 const API_PORT = process.env.API_TEST_PORT || 3199;
+const SITE_PORT = process.env.SITE_TEST_PORT || 4199;
 
 // The login specs run against BANK_URL. Without one (no .env, no CI secret), they use the
 // built-in Ledgerline demo bank and its demo customer, so they still run instead of skipping.
@@ -48,7 +49,7 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
   },
-  webServer: {
+  webServer: [{
     command: 'node server.js',
     url: `http://localhost:${API_PORT}/api/tests`,
     env: {
@@ -64,7 +65,14 @@ export default defineConfig({
     },
     reuseExistingServer: !process.env.CI,
     timeout: 30_000,
-  },
+  }, {
+    // The public GitHub Pages site (site/index.html), served the way CI publishes it.
+    command: 'npm run -s site:build && node scripts/serve-site.js',
+    url: `http://localhost:${SITE_PORT}/`,
+    env: { ...process.env, PORT: String(SITE_PORT) },
+    reuseExistingServer: !process.env.CI,
+    timeout: 30_000,
+  }],
   projects: [
     // Fast unit tests for helper code (no browser, no server needed).
     { name: 'unit', testMatch: 'unit/**/*.spec.ts' },
@@ -144,6 +152,16 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         // Optional: point at a system Chromium (e.g. in Docker) instead of Playwright's download.
+        launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined },
+      },
+    },
+    {
+      // The public results page: playground, CI results (mocked with page.route), accessibility.
+      name: 'site',
+      testMatch: 'site/**/*.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        baseURL: `http://localhost:${SITE_PORT}`,
         launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROMIUM_PATH || undefined },
       },
     },

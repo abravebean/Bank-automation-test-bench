@@ -3,262 +3,1571 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Bank Test Bench · Live test results</title>
-  <meta name="description" content="Live test results for Kevin Tran's Bank Login Test Bench: compliance evidence, API and security test reports, updated on every push." />
+  <title>Try to break Ledgerline · Kevin Tran</title>
+  <meta name="description" content="Kevin Tran's QA automation portfolio. Attack Ledgerline, a demo bank, in your browser and see the automated test that blocks each attack, with live results from the latest CI run." />
+  <meta property="og:title" content="Try to break Ledgerline" />
+  <meta property="og:description" content="A demo bank tested at every layer. Attack it in your browser and see which test stops you." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:wght@500;600&family=IBM+Plex+Sans:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Serif:ital,wght@0,500;0,600;1,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
       --paper: #ece5d3;
+      --paper-2: #e4dcc6;
       --paper-line: #ddd2b3;
       --rule: #c7b990;
       --ink: #241f16;
-      --muted: #6b604c;
-      --pass: #2f6f4e;
-      --fail: #a3392a;
-      --pending: #7d5f27;
+      --ink-2: #3d3526;
+      --muted: #645a47;
+      --tape: #faf6ea;
+      --tape-ink: #2a251b;
+      --pass: #2b6a49;
+      --pass-bg: #d9e6d6;
+      --fail: #9e3324;
+      --stamp: #b13a26;
+      --pending: #765a24;
+      --gap: #8a4f12;
+      --gap-bg: #f0dcc0;
+      --focus: #1d4ed8;
+      --shadow: 0 1px 0 rgba(36, 31, 22, .08), 0 10px 30px -12px rgba(36, 31, 22, .35);
+      --radius: 3px;
+      color-scheme: light;
     }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --paper: #1c1914;
+        --paper-2: #24201a;
+        --paper-line: #26221b;
+        --rule: #4a4232;
+        --ink: #efe8d6;
+        --ink-2: #d9d0ba;
+        --muted: #b1a68d;
+        --tape: #2b2720;
+        --tape-ink: #efe8d6;
+        --pass: #7fcb9c;
+        --pass-bg: #213328;
+        --fail: #f08b74;
+        --stamp: #ef6c52;
+        --pending: #d7b673;
+        --gap: #f0b26b;
+        --gap-bg: #3a2b18;
+        --focus: #8ab4ff;
+        --shadow: 0 1px 0 rgba(0, 0, 0, .3), 0 14px 34px -14px rgba(0, 0, 0, .8);
+        color-scheme: dark;
+      }
+    }
+
     * { box-sizing: border-box; }
     [hidden] { display: none !important; }
+    html { scroll-behavior: smooth; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
     body {
       margin: 0;
-      min-height: 100vh;
       color: var(--ink);
       background: var(--paper);
       background-image: repeating-linear-gradient(to bottom, transparent, transparent 34px, var(--paper-line) 35px);
       font: 16px/1.55 "IBM Plex Sans", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
     }
-    .wrap { max-width: 760px; margin: 0 auto; padding: 56px 20px 96px; }
-    a { color: var(--ink); }
-    a:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+    a { color: inherit; }
+    :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+    .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+    .wrap { max-width: 1160px; margin: 0 auto; padding: 0 24px; }
+    @media (max-width: 640px) { .wrap { padding: 0 16px; } }
 
-    header { border-bottom: 2px solid var(--ink); padding-bottom: 26px; margin-bottom: 32px; }
-    .byline { font-size: 14px; color: var(--muted); margin: 0 0 14px; }
-    h1 { font: 600 34px/1.15 "IBM Plex Serif", Georgia, serif; margin: 0 0 12px; letter-spacing: -0.01em; }
-    .lede { margin: 0; max-width: 62ch; color: var(--muted); }
+    /* ------------------------------------------------------------ top bar */
+    .topbar { position: sticky; top: 0; z-index: 20; background: color-mix(in srgb, var(--paper) 92%, transparent); backdrop-filter: blur(6px); border-bottom: 1px solid var(--rule); }
+    .topbar .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; height: 54px; }
+    .brand { font: 600 15px "IBM Plex Mono", monospace; letter-spacing: .02em; text-decoration: none; display: flex; align-items: center; gap: 10px; }
+    .brand-mark { width: 22px; height: 22px; border: 2px solid currentColor; display: grid; place-items: center; font-size: 12px; transform: rotate(-4deg); }
+    @media (max-width: 640px) { .brand { font-size: 14px; } .brand .long { display: none; } }
+    .topnav { display: flex; gap: 22px; font-size: 14px; }
+    .topnav a { text-decoration: none; color: var(--muted); }
+    .topnav a:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; }
+    @media (max-width: 720px) { .topnav a:not(.keep) { display: none; } }
 
-    /* The verdict: a rubber stamp, the one loud element on the page */
-    .verdict { display: flex; align-items: center; flex-wrap: wrap; gap: 14px 22px; margin: 0 0 8px; }
-    .stamp {
-      font: 500 15px "IBM Plex Mono", monospace;
-      padding: 6px 14px;
-      border: 2px solid currentColor;
-      transform: rotate(-2deg);
+    /* ------------------------------------------------------------ hero */
+    .hero { padding: 64px 0 56px; border-bottom: 2px solid var(--ink); }
+    .hero .wrap { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 48px; align-items: end; }
+    @media (max-width: 900px) { .hero .wrap { grid-template-columns: 1fr; gap: 32px; } .hero { padding: 40px 0; } }
+    .eyebrow { font: 500 13px "IBM Plex Mono", monospace; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 18px; }
+    h1 { font: 600 clamp(40px, 6.4vw, 76px)/1.0 "IBM Plex Serif", Georgia, serif; letter-spacing: -0.025em; margin: 0 0 22px; }
+    h1 em { font-style: italic; font-weight: 500; position: relative; white-space: nowrap; }
+    h1 em::after { content: ""; position: absolute; left: -2%; right: -2%; bottom: .08em; height: .09em; background: var(--stamp); transform: rotate(-1.2deg); opacity: .85; }
+    .lede { font-size: 18px; max-width: 58ch; color: var(--ink-2); margin: 0 0 28px; }
+    .cta-row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+    .btn { font: 600 15px "IBM Plex Sans", sans-serif; display: inline-flex; align-items: center; gap: 8px; padding: 11px 18px; border: 2px solid var(--ink); background: var(--ink); color: var(--paper); text-decoration: none; cursor: pointer; border-radius: var(--radius); }
+    .btn:hover { transform: translate(-1px, -1px); box-shadow: 3px 3px 0 var(--stamp); }
+    .btn.ghost { background: transparent; color: var(--ink); }
+    .btn.ghost:hover { box-shadow: 3px 3px 0 var(--rule); }
+    .btn:disabled, .btn[aria-disabled="true"] { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    .counters { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--rule); background: color-mix(in srgb, var(--paper) 70%, var(--tape)); margin-top: 36px; }
+    .counters div { padding: 14px 16px 12px; border-right: 1px solid var(--rule); }
+    .counters div:last-child { border-right: none; }
+    .counters strong { display: block; font: 600 30px/1 "IBM Plex Serif", Georgia, serif; font-variant-numeric: tabular-nums; }
+    .counters span { font-size: 13px; color: var(--muted); }
+    @media (max-width: 640px) {
+      .counters { grid-template-columns: repeat(2, 1fr); }
+      .counters div:nth-child(2) { border-right: none; }
+      .counters div:nth-child(-n + 2) { border-bottom: 1px solid var(--rule); }
     }
-    .stamp.pass { color: var(--pass); }
-    .stamp.fail { color: var(--fail); }
-    .stamp.pending { color: var(--pending); }
-    .run-meta { font-size: 14px; color: var(--muted); }
+
+    .status-card { background: var(--tape); border: 1px solid var(--rule); box-shadow: var(--shadow); padding: 22px 24px 20px; position: relative; }
+    .status-card h2 { font: 500 12px "IBM Plex Mono", monospace; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0 0 16px; }
+    .verdict-stamp { display: inline-block; font: 600 20px "IBM Plex Mono", monospace; letter-spacing: .04em; padding: 6px 14px; border: 3px double currentColor; transform: rotate(-3deg); margin: 2px 0 14px; color: var(--pending); }
+    .verdict-stamp.pass { color: var(--pass); }
+    .verdict-stamp.fail { color: var(--fail); }
+    .run-meta { font-size: 14px; color: var(--muted); margin: 0 0 18px; }
     .run-meta code { font: 13px "IBM Plex Mono", monospace; }
+    .reqbar { display: flex; height: 12px; border: 1px solid var(--rule); background: var(--paper-2); overflow: hidden; }
+    .reqbar span { display: block; height: 100%; transition: width .8s cubic-bezier(.2,.8,.2,1); width: 0; }
+    .reqbar .s-passed { background: var(--pass); }
+    .reqbar .s-failed { background: var(--fail); }
+    .reqbar .s-not-run { background: var(--pending); opacity: .55; }
+    .reqbar .s-no-tests { background: repeating-linear-gradient(45deg, var(--gap), var(--gap) 3px, transparent 3px, transparent 6px); }
+    .reqlegend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 10px 0 0; padding: 0; list-style: none; font-size: 13px; color: var(--muted); }
+    .reqlegend b { color: var(--ink); font-variant-numeric: tabular-nums; }
+    .dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+    .dot.passed { background: var(--pass); } .dot.failed { background: var(--fail); }
+    .dot.not-run { background: var(--pending); opacity: .6; } .dot.no-tests { background: var(--gap); }
+    .status-card .more { display: inline-block; margin-top: 16px; font-size: 14px; }
 
-    h2 { font: 600 20px "IBM Plex Serif", Georgia, serif; margin: 40px 0 6px; }
-    .section-note { margin: 0 0 12px; color: var(--muted); font-size: 14px; }
+    /* ------------------------------------------------------------ sections */
+    section.block { padding: 72px 0; border-bottom: 1px solid var(--rule); }
+    @media (max-width: 640px) { section.block { padding: 48px 0; } }
+    .section-head { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 18px 32px; margin-bottom: 30px; }
+    .section-head h2 { font: 600 clamp(28px, 3.6vw, 40px)/1.08 "IBM Plex Serif", Georgia, serif; letter-spacing: -0.015em; margin: 0 0 10px; }
+    .section-head p { margin: 0; max-width: 62ch; color: var(--ink-2); }
+    .kicker { font: 500 12px "IBM Plex Mono", monospace; letter-spacing: .1em; text-transform: uppercase; color: var(--stamp); margin: 0 0 10px; }
 
-    .reports { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
-    .reports li { border-bottom: 1px solid var(--rule); }
-    .reports a {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 2px 16px;
-      padding: 16px 4px;
-      text-decoration: none;
+    /* ------------------------------------------------------------ playground */
+    .score { display: flex; align-items: center; gap: 16px; font: 500 14px "IBM Plex Mono", monospace; color: var(--muted); }
+    .score-pips { display: flex; gap: 5px; }
+    .score-pips i { width: 14px; height: 14px; border: 1.5px solid var(--rule); transform: rotate(45deg); transition: background .3s, border-color .3s; }
+    .score-pips i.done { background: var(--pass); border-color: var(--pass); }
+    .score b { color: var(--ink); }
+
+    .lab { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 440px); gap: 32px; align-items: start; }
+    .lab > * { min-width: 0; }
+    @media (max-width: 980px) { .lab { grid-template-columns: 1fr; } }
+
+    .attacks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 0; padding: 0; list-style: none; }
+    @media (max-width: 560px) { .attacks { grid-template-columns: 1fr; } }
+    .attack {
+      width: 100%; height: 100%; text-align: left; cursor: pointer; font: inherit; color: inherit;
+      background: color-mix(in srgb, var(--tape) 82%, var(--paper));
+      border: 1px solid var(--rule); border-radius: var(--radius);
+      padding: 16px 16px 14px; display: grid; grid-template-columns: 1fr auto; gap: 4px 12px;
+      transition: transform .15s, box-shadow .15s, border-color .15s; position: relative;
     }
-    .reports a:hover .report-name { text-decoration: underline; }
-    .report-name { font-weight: 500; font-size: 17px; }
-    .report-desc { grid-column: 1; color: var(--muted); font-size: 14px; }
-    .report-result { grid-row: 1 / span 2; grid-column: 2; align-self: center; font: 13px "IBM Plex Mono", monospace; text-align: right; white-space: nowrap; }
-    .report-result.pass { color: var(--pass); }
-    .report-result.fail { color: var(--fail); }
-    .report-result.pending { color: var(--muted); }
+    .attack:hover:not([aria-disabled="true"]) { transform: translate(-2px, -2px); box-shadow: 4px 4px 0 var(--ink); border-color: var(--ink); }
+    .attack[aria-disabled="true"] { cursor: progress; }
+    .attack[aria-current="true"] { border-color: var(--ink); box-shadow: inset 4px 0 0 var(--stamp); }
+    .attack-n { font: 500 12px "IBM Plex Mono", monospace; color: var(--muted); grid-column: 1; }
+    .attack-title { font: 600 17px/1.25 "IBM Plex Serif", Georgia, serif; grid-column: 1; }
+    .attack-pitch { font-size: 14px; color: var(--muted); grid-column: 1 / -1; margin-top: 2px; }
+    .attack-tags { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .tag { font: 500 11px "IBM Plex Mono", monospace; padding: 2px 7px; border: 1px solid var(--rule); color: var(--muted); border-radius: 2px; white-space: nowrap; }
+    .attack-result { grid-column: 2; grid-row: 1 / span 2; align-self: start; font: 600 11px "IBM Plex Mono", monospace; letter-spacing: .06em; padding: 3px 7px; border: 1.5px solid currentColor; transform: rotate(-4deg); color: var(--muted); opacity: 0; transition: opacity .3s; }
+    .attack-result.on { opacity: 1; color: var(--stamp); }
+    .attack-result.ok { opacity: 1; color: var(--pass); }
 
-    .counts { display: grid; grid-template-columns: repeat(4, 1fr); margin: 14px 0 0; border: 1px solid var(--rule); }
-    .counts div { padding: 12px 14px; border-right: 1px solid var(--rule); }
-    .counts div:last-child { border-right: none; }
-    .counts strong { display: block; font: 600 26px/1.1 "IBM Plex Serif", Georgia, serif; }
-    .counts span { font-size: 13px; color: var(--muted); }
+    .freeplay { margin-top: 18px; border: 1px dashed var(--rule); padding: 18px; border-radius: var(--radius); }
+    .freeplay h3 { font: 600 18px "IBM Plex Serif", Georgia, serif; margin: 0 0 4px; }
+    .freeplay p { margin: 0 0 14px; font-size: 14px; color: var(--muted); }
+    .fp-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 10px; align-items: end; }
+    @media (max-width: 640px) { .fp-row { grid-template-columns: 1fr 1fr; } .fp-row .btn { grid-column: 1 / -1; justify-content: center; } }
+    .field label { display: block; font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 4px; letter-spacing: .02em; }
+    .field select, .field input { width: 100%; font: 15px "IBM Plex Mono", monospace; padding: 9px 10px; color: var(--ink); background: var(--tape); border: 1px solid var(--rule); border-radius: 2px; }
+    .field input:focus, .field select:focus { border-color: var(--ink); }
+    .hint-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; font-size: 13px; color: var(--muted); align-items: center; }
+    .chip { font: 500 12px "IBM Plex Mono", monospace; padding: 3px 9px; border: 1px solid var(--rule); background: transparent; color: var(--ink); cursor: pointer; border-radius: 99px; }
+    .chip:hover { border-color: var(--ink); }
 
-    .shot { margin: 14px 0 22px; }
-    .shot img { display: block; width: 100%; height: auto; border: 1px solid var(--rule); background: #fff; }
-    .shot figcaption { margin-top: 6px; font-size: 13px; color: var(--muted); }
+    /* the bank + the receipt */
+    .terminal { position: sticky; top: 72px; display: grid; gap: 14px; }
+    @media (max-width: 980px) { .terminal { position: static; } }
+    .acct-panel { background: var(--ink); color: var(--paper); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); }
+    @media (prefers-color-scheme: dark) { .acct-panel { background: #0f0d0a; color: var(--ink); border: 1px solid var(--rule); } }
+    .acct-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 13px; opacity: .85; margin-bottom: 12px; }
+    .acct-top .who { font-weight: 600; }
+    .linkish { background: none; border: none; color: inherit; font: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 0; }
+    .accts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .acct { border: 1px solid rgba(236,229,211,.22); padding: 10px 12px; border-radius: 2px; transition: background .4s; }
+    .acct.flash-down { background: rgba(239,108,82,.22); }
+    .acct.flash-up { background: rgba(127,203,156,.22); }
+    .acct-name { font-size: 12px; opacity: .75; }
+    .acct-bal { font: 600 22px "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+    .acct-num { font: 12px "IBM Plex Mono", monospace; opacity: .6; }
+    .limit { margin-top: 12px; font-size: 12px; opacity: .85; }
+    .limit-bar { height: 5px; background: rgba(236,229,211,.18); margin-top: 6px; overflow: hidden; }
+    .limit-bar span { display: block; height: 100%; background: #e9c46a; width: 0; transition: width .6s; }
 
-    .stack { columns: 2; column-gap: 32px; padding-left: 18px; margin: 10px 0 0; font-size: 15px; }
-    .stack li { break-inside: avoid; padding: 2px 0; }
+    .tape {
+      position: relative; background: var(--tape); color: var(--tape-ink);
+      font: 13px/1.55 "IBM Plex Mono", ui-monospace, monospace;
+      padding: 18px 18px 26px; min-height: 360px; box-shadow: var(--shadow);
+      border-left: 1px solid var(--rule); border-right: 1px solid var(--rule);
+    }
+    .tape::after {
+      content: ""; position: absolute; left: 0; right: 0; bottom: -10px; height: 10px;
+      background: linear-gradient(-45deg, transparent 7px, var(--tape) 0) 0 0 / 14px 10px repeat-x,
+                  linear-gradient(45deg, transparent 7px, var(--tape) 0) 0 0 / 14px 10px repeat-x;
+    }
+    .tape-head { text-align: center; border-bottom: 1px dashed var(--rule); padding-bottom: 10px; margin-bottom: 12px; }
+    .tape-head b { display: block; letter-spacing: .3em; font-size: 14px; }
+    .tape-head span { font-size: 11px; color: var(--muted); }
+    .tape-body { min-height: 230px; max-height: 560px; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; }
+    @media (max-width: 980px) { .tape-body { max-height: none; } }
+    .tape-idle { color: var(--muted); text-align: center; padding: 48px 8px; }
+    .tape-idle .arrow { display: block; font-size: 22px; margin-bottom: 8px; }
+    .ln { white-space: pre-wrap; word-break: break-word; padding: 1px 0; animation: type .38s steps(26, end) both; }
+    @keyframes type { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+    .ln.req { color: var(--tape-ink); }
+    .ln.req::before { content: "→ "; color: var(--muted); }
+    .ln.res::before { content: "← "; color: var(--muted); }
+    .ln.res.ok { color: var(--pass); }
+    .ln.res.err { color: var(--fail); }
+    .ln.chk { color: var(--pass); }
+    .ln.chk::before { content: "✓ "; }
+    .ln.bad { color: var(--fail); font-weight: 600; }
+    .ln.bad::before { content: "✗ "; }
+    .ln.note { color: var(--muted); }
+    .ln.title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+    .ln.sep { height: 0; padding: 0; margin: 10px 0; border-top: 1px dashed var(--rule); animation: none; }
+    .ln.why { font-family: "IBM Plex Sans", sans-serif; font-size: 14px; color: var(--ink-2); padding: 8px 0 2px; animation: fade .5s both; }
+    @keyframes fade { from { opacity: 0; transform: translateY(3px); } }
 
-    footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--rule); font-size: 14px; color: var(--muted); }
+    .race { display: grid; grid-template-columns: repeat(10, minmax(0, 30px)); gap: 5px; margin: 8px 0 6px; }
+    .race i { aspect-ratio: 1; border: 1.5px solid var(--rule); display: grid; place-items: center; font: 600 9px "IBM Plex Mono", monospace; font-style: normal; transition: background .2s, border-color .2s, transform .2s; }
+    .race i.fly { border-color: var(--ink); transform: scale(.85); }
+    .race i.ok { background: var(--pass); border-color: var(--pass); color: var(--tape); }
+    .race i.no { border-color: var(--fail); color: var(--fail); background: repeating-linear-gradient(45deg, transparent, transparent 3px, color-mix(in srgb, var(--fail) 25%, transparent) 3px, color-mix(in srgb, var(--fail) 25%, transparent) 5px); }
+    .meter { height: 8px; border: 1px solid var(--rule); margin: 8px 0; }
+    .meter span { display: block; height: 100%; width: 0; background: var(--ink); }
 
-    @media (max-width: 600px) {
-      h1 { font-size: 28px; }
-      .counts { grid-template-columns: repeat(2, 1fr); }
-      .counts div:nth-child(2) { border-right: none; }
-      .counts div:nth-child(-n + 2) { border-bottom: 1px solid var(--rule); }
-      .stack { columns: 1; }
-      .reports a { grid-template-columns: 1fr; }
-      .report-result { grid-row: auto; grid-column: 1; text-align: left; }
+    .stamp-row { display: flex; justify-content: flex-end; margin: -6px 4px -2px 0; pointer-events: none; }
+    .big-stamp {
+      font: 600 30px/1 "IBM Plex Mono", monospace; letter-spacing: .08em; color: var(--stamp);
+      border: 4px solid currentColor; padding: 8px 14px 6px; transform: rotate(-11deg);
+      animation: thump .45s cubic-bezier(.2, 1.6, .4, 1) both; opacity: .88; text-align: center;
+      -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='80'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -2.2 1.7'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+              mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='80'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -2.2 1.7'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    .big-stamp small { display: block; font-size: 10px; letter-spacing: .16em; margin-top: 4px; }
+    @media (max-width: 640px) { .big-stamp { font-size: 24px; } }
+    .big-stamp.ok { color: var(--pass); }
+    @keyframes thump { 0% { opacity: 0; transform: rotate(-11deg) scale(2.4); } 60% { opacity: .95; } 100% { opacity: .88; transform: rotate(-11deg) scale(1); } }
+
+    .proof { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--rule); font-family: "IBM Plex Sans", sans-serif; font-size: 13px; animation: fade .5s both; }
+    .proof-title { font: 600 11px "IBM Plex Mono", monospace; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+    .req-pill { font: 600 11px "IBM Plex Mono", monospace; padding: 1px 6px; background: var(--ink); color: var(--paper); border-radius: 2px; text-decoration: none; letter-spacing: .04em; cursor: pointer; border: none; }
+    .proof ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+    .proof li { display: grid; grid-template-columns: 16px 1fr; gap: 6px; align-items: start; }
+    .proof li .o { font-weight: 700; }
+    .proof li .o.passed { color: var(--pass); } .proof li .o.failed { color: var(--fail); } .proof li .o.unknown { color: var(--muted); }
+    .proof a { text-decoration: none; }
+    .proof a:hover .file { text-decoration: underline; }
+    .proof .file { font: 12px "IBM Plex Mono", monospace; color: var(--ink); }
+    .proof .t { color: var(--muted); display: block; }
+    .lang { font: 600 10px "IBM Plex Mono", monospace; padding: 0 4px; border: 1px solid var(--rule); color: var(--muted); margin-left: 4px; vertical-align: 1px; }
+
+    .victory { margin-top: 20px; padding: 18px 20px; border: 2px solid var(--pass); background: var(--pass-bg); display: flex; gap: 16px; align-items: center; animation: fade .6s both; }
+    .victory strong { font: 600 18px "IBM Plex Serif", Georgia, serif; display: block; }
+    .victory .seal { flex: none; width: 54px; height: 54px; border-radius: 50%; border: 2px dashed var(--pass); display: grid; place-items: center; color: var(--pass); font: 700 22px "IBM Plex Mono", monospace; transform: rotate(-10deg); }
+
+    /* ------------------------------------------------------------ requirements explorer */
+    .filters { display: flex; flex-wrap: wrap; gap: 8px; }
+    .filter { font: 500 13px "IBM Plex Sans", sans-serif; padding: 6px 12px; border: 1px solid var(--rule); background: transparent; color: var(--ink); cursor: pointer; border-radius: 99px; display: inline-flex; align-items: center; }
+    .filter[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+    .filter[aria-pressed="true"] .dot { outline: 1.5px solid var(--paper); }
+    .filter b { margin-left: 6px; font-variant-numeric: tabular-nums; }
+    .cat { margin: 26px 0 0; }
+    .cat h3 { font: 500 12px "IBM Plex Mono", monospace; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; display: flex; align-items: center; gap: 10px; }
+    .cat h3::after { content: ""; flex: 1; border-top: 1px solid var(--rule); }
+    .req-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+    .req-tile { text-align: left; font: inherit; color: inherit; cursor: pointer; border: 1px solid var(--rule); background: color-mix(in srgb, var(--tape) 70%, var(--paper)); padding: 13px 14px 12px; border-radius: var(--radius); display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; position: relative; overflow: hidden; transition: transform .15s, box-shadow .15s; }
+    .req-tile::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--rule); }
+    .req-tile.passed::before { background: var(--pass); }
+    .req-tile.failed::before { background: var(--fail); }
+    .req-tile.not-run::before { background: var(--pending); opacity: .6; }
+    .req-tile.no-tests::before { background: repeating-linear-gradient(0deg, var(--gap), var(--gap) 4px, transparent 4px, transparent 8px); }
+    .req-tile:hover { transform: translate(-2px, -2px); box-shadow: 4px 4px 0 var(--ink); }
+    .req-id { font: 600 14px "IBM Plex Mono", monospace; grid-row: 1 / span 3; padding-top: 1px; }
+    .req-t { font-size: 14px; font-weight: 500; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .req-c { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .req-meta { font: 12px "IBM Plex Mono", monospace; color: var(--muted); display: flex; gap: 10px; margin-top: 4px; }
+    .req-meta .st { font-weight: 600; }
+    .st.passed { color: var(--pass); } .st.failed { color: var(--fail); } .st.not-run { color: var(--pending); } .st.no-tests { color: var(--gap); }
+    .req-grid .req-tile[hidden] { display: none; }
+    .empty-note { color: var(--muted); font-size: 14px; }
+
+    dialog.drawer { margin: 0 0 0 auto; height: 100dvh; max-height: 100dvh; width: min(620px, 100vw); max-width: 100vw; border: none; border-left: 2px solid var(--ink); padding: 0; background: var(--paper); color: var(--ink); box-shadow: -20px 0 60px -20px rgba(0,0,0,.45); }
+    dialog.drawer[open] { animation: slide .3s cubic-bezier(.2,.8,.2,1); }
+    @keyframes slide { from { transform: translateX(40px); opacity: 0; } }
+    dialog.drawer::backdrop { background: rgba(20, 17, 12, .45); }
+    .drawer-inner { padding: 26px 28px 40px; }
+    @media (max-width: 640px) { .drawer-inner { padding: 20px 16px 32px; } }
+    .drawer-close { position: sticky; top: 0; float: right; font: 600 22px/1 "IBM Plex Sans", sans-serif; width: 38px; height: 38px; border: 1px solid var(--rule); background: var(--paper); color: var(--ink); cursor: pointer; border-radius: 50%; }
+    .drawer h2 { font: 600 26px/1.2 "IBM Plex Serif", Georgia, serif; margin: 6px 0 12px; padding-right: 44px; }
+    .drawer dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; font-size: 14px; margin: 0 0 22px; }
+    .drawer dt { color: var(--muted); }
+    .drawer dd { margin: 0; }
+    .drawer h3 { font: 600 13px "IBM Plex Mono", monospace; letter-spacing: .08em; text-transform: uppercase; margin: 22px 0 8px; color: var(--muted); }
+    .t-list { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--rule); }
+    .t-list li { border-bottom: 1px solid var(--rule); padding: 10px 0; }
+    .t-row { display: grid; grid-template-columns: 18px 1fr auto; gap: 8px; align-items: baseline; font-size: 14px; }
+    .t-row .o { font-weight: 700; }
+    .t-row .o.passed, .t-row .o.flaky { color: var(--pass); } .t-row .o.failed { color: var(--fail); } .t-row .o.skipped { color: var(--muted); }
+    .t-sub { grid-column: 2 / -1; font: 12px "IBM Plex Mono", monospace; color: var(--muted); }
+    .t-sub a { color: var(--muted); }
+    .t-dur { font: 12px "IBM Plex Mono", monospace; color: var(--muted); white-space: nowrap; }
+    .t-list details { grid-column: 2 / -1; margin-top: 4px; }
+    .t-list summary { font-size: 13px; cursor: pointer; color: var(--ink-2); }
+    .t-list ol { margin: 6px 0 0; padding-left: 20px; font-size: 13px; color: var(--ink-2); }
+    .gap-box { border: 1.5px dashed var(--gap); background: var(--gap-bg); padding: 12px 14px; font-size: 14px; }
+
+    /* ------------------------------------------------------------ layers */
+    .stackbars { display: grid; grid-template-columns: minmax(0, 139fr) minmax(0, 118fr); gap: 14px; margin: 6px 0 14px; }
+    .stackbars .lbl { font: 500 12px "IBM Plex Mono", monospace; color: var(--muted); margin-bottom: 6px; display: block; letter-spacing: .04em; }
+    .stackbar { display: flex; height: 54px; border: 1.5px solid var(--ink); overflow: hidden; }
+    @media (max-width: 640px) { .stackbars { grid-template-columns: 1fr; } }
+    .stackbar button { border: none; border-right: 1px solid var(--paper); cursor: pointer; padding: 0; font: 600 12px "IBM Plex Mono", monospace; color: #fff; position: relative; min-width: 0; transition: filter .15s, flex-grow .6s cubic-bezier(.2,.8,.2,1); white-space: nowrap; overflow: hidden; text-overflow: clip; }
+    .stackbar button:last-child { border-right: none; }
+    .stackbar button[aria-pressed="true"] { filter: brightness(1.18) saturate(1.1); box-shadow: inset 0 -5px 0 var(--stamp); }
+    .stackbar button:hover { filter: brightness(1.12); }
+    .layer-legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)); gap: 6px 18px; margin: 0 0 22px; padding: 0; list-style: none; }
+    .layer-legend button { all: unset; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 14px; padding: 3px 0; }
+    .layer-legend button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+    .layer-legend button[aria-pressed="true"] span.n { text-decoration: underline; text-underline-offset: 3px; }
+    .layer-legend .sw { width: 14px; height: 14px; flex: none; }
+    .layer-legend .n { font: 12px "IBM Plex Mono", monospace; color: var(--muted); margin-left: auto; }
+    .layer-detail { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 0; border: 1px solid var(--rule); background: var(--tape); min-height: 210px; }
+    @media (max-width: 820px) { .layer-detail { grid-template-columns: 1fr; } }
+    .layer-detail .ld-text { padding: 22px 24px; }
+    .layer-detail h3 { font: 600 22px "IBM Plex Serif", Georgia, serif; margin: 0 0 6px; }
+    .layer-detail .count { font: 500 13px "IBM Plex Mono", monospace; color: var(--muted); margin: 0 0 12px; }
+    .layer-detail p { margin: 0 0 12px; font-size: 15px; color: var(--ink-2); }
+    .tools { display: flex; flex-wrap: wrap; gap: 6px; }
+    .layer-detail pre { margin: 0; padding: 20px 22px; background: #1d1a15; color: #eae3cf; font: 12.5px/1.6 "IBM Plex Mono", monospace; overflow-x: auto; border-left: 1px solid var(--rule); }
+    @media (max-width: 820px) { .layer-detail pre { border-left: none; border-top: 1px solid var(--rule); } }
+    pre .k { color: #f0a580; } pre .s { color: #a8d5a2; } pre .c { color: #8c836f; font-style: italic; } pre .f { color: #9fc4ea; }
+
+    /* ------------------------------------------------------------ running + reports */
+    .shots { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; align-items: start; }
+    @media (max-width: 820px) { .shots { grid-template-columns: 1fr; } }
+    .shots figure { margin: 0; }
+    .shots img { display: block; width: 100%; height: auto; border: 1px solid var(--rule); background: #fff; box-shadow: var(--shadow); }
+    .shots figcaption { margin-top: 8px; font-size: 13px; color: var(--muted); }
+
+    .reports { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+    @media (max-width: 400px) { .reports { grid-template-columns: 1fr; } }
+    .reports a { display: grid; grid-template-columns: 1fr auto; gap: 4px 14px; padding: 18px; border: 1px solid var(--rule); text-decoration: none; height: 100%; background: color-mix(in srgb, var(--tape) 60%, var(--paper)); border-radius: var(--radius); transition: transform .15s, box-shadow .15s; }
+    .reports a:hover { transform: translate(-2px, -2px); box-shadow: 4px 4px 0 var(--ink); }
+    .report-name { font-weight: 600; font-size: 16px; }
+    .report-desc { grid-column: 1 / -1; color: var(--muted); font-size: 14px; }
+    .report-result { grid-row: 1; grid-column: 2; font: 12px "IBM Plex Mono", monospace; white-space: nowrap; color: var(--muted); }
+    .report-result.pass { color: var(--pass); } .report-result.fail { color: var(--fail); }
+
+    footer { padding: 40px 0 64px; font-size: 14px; color: var(--muted); }
+    footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0ms !important; transition-duration: .01ms !important; }
     }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <p class="byline">Kevin Tran · QA portfolio</p>
-      <h1>Bank Login Test Bench: live test results</h1>
-      <p class="lede">These reports are rebuilt by GitHub Actions every time code reaches the main branch. Everything below comes from the latest run, not a screenshot.</p>
-    </header>
+  <header class="topbar">
+    <div class="wrap">
+      <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true">L</span>Ledgerline<span class="long"> Test</span> Lab</a>
+      <nav class="topnav" aria-label="Sections">
+        <a href="#playground" class="keep">Playground</a>
+        <a href="#requirements">Requirements</a>
+        <a href="#layers">Test layers</a>
+        <a href="#reports">Reports</a>
+        <a href="https://github.com/abravebean/Bank-automation-test-bench" class="keep">GitHub</a>
+      </nav>
+    </div>
+  </header>
 
-    <main>
-      <div class="verdict">
-        <span id="stamp" class="stamp pending">Loading results…</span>
-        <span id="run-meta" class="run-meta"></span>
+  <main id="top">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="wrap">
+        <div>
+          <p class="eyebrow">Kevin Tran · QA automation portfolio</p>
+          <h1 id="hero-title">Try to <em>break</em> this bank.</h1>
+          <p class="lede">Ledgerline is a fake bank I built, then tested at every layer: UI, API, database, security, accessibility. Pick an attack below. It runs against the bank's real rules engine, right in your browser, and shows you the automated test that stops it.</p>
+          <div class="cta-row">
+            <a class="btn" href="#playground">Start attacking ↓</a>
+            <a class="btn ghost" href="https://github.com/abravebean/Bank-automation-test-bench">See the code</a>
+          </div>
+          <div class="counters" role="group" aria-label="Automated checks">
+            <div><strong data-count="153" id="n-playwright">153</strong><span>Playwright tests (TypeScript)</span></div>
+            <div><strong data-count="45">45</strong><span>Java API tests</span></div>
+            <div><strong data-count="60">60</strong><span>Postman assertions</span></div>
+            <div><strong data-count="13">13</strong><span>infrastructure tests</span></div>
+          </div>
+        </div>
+
+        <aside class="status-card" aria-labelledby="status-title">
+          <h2 id="status-title">Latest CI run</h2>
+          <div id="verdict" class="verdict-stamp">LOADING…</div>
+          <p class="run-meta" id="run-meta">Results come from GitHub Actions on every push to main.</p>
+          <div class="reqbar" id="reqbar" aria-hidden="true">
+            <span class="s-passed"></span><span class="s-failed"></span><span class="s-not-run"></span><span class="s-no-tests"></span>
+          </div>
+          <ul class="reqlegend" id="reqlegend"></ul>
+          <a class="more" href="compliance/index.html">Full compliance evidence report →</a>
+        </aside>
       </div>
+    </section>
 
-      <div class="counts" id="counts" role="group" aria-label="Requirement results" hidden>
-        <div><strong id="c-passed">–</strong><span>requirements passed</span></div>
-        <div><strong id="c-failed">–</strong><span>failed</span></div>
-        <div><strong id="c-notrun">–</strong><span>not run</span></div>
-        <div><strong id="c-notests">–</strong><span>without tests</span></div>
+    <!-- ============================================================ playground -->
+    <section class="block" id="playground" aria-labelledby="pg-title">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <p class="kicker">Playground</p>
+            <h2 id="pg-title">Nine ways to rob Ledgerline</h2>
+            <p>You're signed in as Alex Rivera. Each attack is one of the risks in my test plan. Watch the receipt print, then see which tests prove the bank holds. Those tests run on every commit.</p>
+          </div>
+          <div class="score" aria-live="polite">
+            <div class="score-pips" id="pips" aria-hidden="true"></div>
+            <span><b id="tried">0</b>/<span id="total-attacks">9</span> tried · <b id="through">0</b> got through</span>
+          </div>
+        </div>
+
+        <div class="lab">
+          <div>
+            <ul class="attacks" id="attacks"></ul>
+
+            <form class="freeplay" id="freeplay" autocomplete="off">
+              <h3>Or try your own transfer</h3>
+              <p>Type any amount. The real validation rules answer, and the receipt shows which test covers your case.</p>
+              <div class="fp-row">
+                <div class="field">
+                  <label for="fp-from">From</label>
+                  <select id="fp-from"></select>
+                </div>
+                <div class="field">
+                  <label for="fp-to">To</label>
+                  <select id="fp-to"></select>
+                </div>
+                <div class="field">
+                  <label for="fp-amount">Amount ($)</label>
+                  <input id="fp-amount" inputmode="decimal" placeholder="25.00" maxlength="20">
+                </div>
+                <button class="btn" type="submit" id="fp-send">Transfer</button>
+              </div>
+              <div class="hint-row" id="fp-hints"><span>Try:</span></div>
+            </form>
+            <div id="victory"></div>
+          </div>
+
+          <div class="terminal">
+            <div class="acct-panel" aria-label="Alex Rivera's accounts">
+              <div class="acct-top">
+                <span>Signed in as <span class="who">Alex Rivera</span></span>
+                <button type="button" class="linkish" id="reset">Reset the bank</button>
+              </div>
+              <div class="accts" id="accts"></div>
+              <div class="limit">
+                <span id="limit-text">Transferred today: $0.00 of $2,500.00</span>
+                <div class="limit-bar"><span id="limit-bar"></span></div>
+              </div>
+            </div>
+
+            <div class="tape" id="tape">
+              <div class="tape-head"><b>LEDGERLINE</b><span id="tape-sub">TEST RECEIPT · NO. 0000</span></div>
+              <div class="tape-body" id="tape-body" tabindex="0" aria-label="Test receipt">
+                <div class="tape-idle"><span class="arrow" aria-hidden="true">←</span>Pick an attack.<br>The receipt prints here.</div>
+              </div>
+            </div>
+            <p class="sr-only" aria-live="assertive" id="announce"></p>
+          </div>
+        </div>
       </div>
+    </section>
 
-      <h2>See it running</h2>
-      <p class="section-note">The dashboard running a bank transfer test, the Ledgerline demo bank, and the Recorder turning clicks into a clean test.</p>
-      <figure class="shot">
-        <img src="demo.gif" width="880" height="576" alt="The Test Bench dashboard runs a transfer test and shows it passing, then the Ledgerline demo bank's accounts page, then the Recorder turning clicks into Playwright code with the URL and username moved to environment variables.">
-      </figure>
-      <figure class="shot">
-        <img src="demo-bank.png" width="1100" height="760" loading="lazy" alt="Ledgerline demo bank: sign-in page, accounts overview, a transfer receipt and an account's transaction history.">
-        <figcaption>Ledgerline, the fictional demo bank under test: sign-in, accounts, a transfer receipt and transaction history.</figcaption>
-      </figure>
+    <!-- ============================================================ requirements -->
+    <section class="block" id="requirements" aria-labelledby="req-title">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <p class="kicker">Traceability</p>
+            <h2 id="req-title"><span id="req-count">24</span> requirements, each traced to the tests that prove it</h2>
+            <p>Every requirement maps to a control (OWASP Top 10, WCAG 2.1, CWE). Tests carry the requirement's tag, and CI builds this matrix from the latest run. Click a requirement to see its tests, their steps, and how long they took.</p>
+          </div>
+          <div class="filters" role="group" aria-label="Filter requirements by status" id="filters"></div>
+        </div>
+        <div id="req-groups"><p class="empty-note">Loading requirements…</p></div>
+      </div>
+    </section>
 
-      <h2>Reports</h2>
-      <ul class="reports">
-        <li>
-          <a href="compliance/index.html">
-            <span class="report-name">Compliance evidence report</span>
-            <span class="report-desc">Every requirement mapped to its control (OWASP, WCAG, CWE), the tests that prove it, each step, and screenshot evidence. Prints to PDF.</span>
-            <span class="report-result pending" id="r-compliance">…</span>
-          </a>
-        </li>
-        <li>
-          <a href="api/api.html">
-            <span class="report-name">API tests (Postman)</span>
-            <span class="report-desc">Chained requests against the dashboard's REST API: contracts, streaming, run history, negative cases.</span>
-            <span class="report-result pending" id="r-api">…</span>
-          </a>
-        </li>
-        <li>
-          <a href="api/malicious-input.html">
-            <span class="report-name">Security tests (data-driven)</span>
-            <span class="report-desc">Path traversal, script, SQL and command injection, and oversized input, one CSV row per attack.</span>
-            <span class="report-result pending" id="r-security">…</span>
-          </a>
-        </li>
-        <li>
-          <a href="https://github.com/abravebean/ledgerline-api-tests">
-            <span class="report-name">Java API tests (REST Assured + Cucumber)</span>
-            <span class="report-desc">A companion suite in Java 17: 45 tests for the Ledgerline API with JUnit 5, Cucumber and Maven, run on every push and nightly.</span>
-            <span class="report-result pending">GitHub</span>
-          </a>
-        </li>
-        <li>
-          <a href="https://github.com/abravebean/Bank-automation-test-bench">
-            <span class="report-name">Source code and test plan</span>
-            <span class="report-desc">The repository, README and risk-based test plan on GitHub.</span>
-            <span class="report-result pending">GitHub</span>
-          </a>
-        </li>
-      </ul>
+    <dialog class="drawer" id="drawer" aria-labelledby="drawer-title">
+      <div class="drawer-inner">
+        <button class="drawer-close" type="button" id="drawer-close" aria-label="Close">×</button>
+        <div id="drawer-body"></div>
+      </div>
+    </dialog>
 
-      <h2>What's being tested</h2>
-      <p class="section-note">Ledgerline, a fictional demo bank with accounts and transfers, and the tooling that tests it.</p>
-      <ul class="stack">
-        <li>Banking rules: boundary values, daily limits, overdraft protection</li>
-        <li>Security: cross-account access (IDOR), lockout, session cookies</li>
-        <li>Ledger integrity and race conditions (no double spending)</li>
-        <li>Playwright (TypeScript) and Selenium UI tests on Chromium, Firefox and WebKit</li>
-        <li>BDD scenarios in Gherkin</li>
-        <li>REST API contract tests with JSON Schema</li>
-        <li>SQL data-integrity tests against PostgreSQL</li>
-        <li>Postman collections run with Newman</li>
-        <li>Performance (p95 latency) and accessibility (WCAG 2.1 AA)</li>
-        <li>A click-to-code test recorder (Playwright Codegen)</li>
-        <li>AWS infrastructure as code (CDK) with its own tests</li>
-        <li>Java API tests: REST Assured, JUnit 5, Cucumber, Maven</li>
-      </ul>
-    </main>
+    <!-- ============================================================ layers -->
+    <section class="block" id="layers" aria-labelledby="layers-title">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <p class="kicker">Test strategy</p>
+            <h2 id="layers-title">Where the tests live</h2>
+            <p>Most checks sit low in the stack, where they're fast and precise. A few real-browser tests sit on top. Pick a layer to see what it covers and an excerpt from one of its tests.</p>
+          </div>
+        </div>
+        <div class="stackbars">
+          <div><span class="lbl" id="lbl-here">THIS REPO · PLAYWRIGHT, LATEST RUN</span><div class="stackbar" id="stackbar" role="group" aria-labelledby="lbl-here"></div></div>
+          <div><span class="lbl" id="lbl-else">OTHER SUITES</span><div class="stackbar" id="stackbar-ext" role="group" aria-labelledby="lbl-else"></div></div>
+        </div>
+        <ul class="layer-legend" id="layer-legend"></ul>
+        <div class="layer-detail" id="layer-detail" aria-live="polite"></div>
+      </div>
+    </section>
 
-    <footer>
-      Built by <a href="https://github.com/abravebean">Kevin Tran</a> · <a href="https://linkedin.com/in/kevi-tran">LinkedIn</a>.
-      Runs against a demo bank only.
-    </footer>
-  </div>
+    <!-- ============================================================ see it running -->
+    <section class="block" aria-labelledby="run-title">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <p class="kicker">The tools</p>
+            <h2 id="run-title">See it running</h2>
+            <p>The Test Bench dashboard runs a transfer test step by step. The Recorder turns clicks into a clean Playwright test, with secrets moved to environment variables.</p>
+          </div>
+        </div>
+        <div class="shots">
+          <figure>
+            <img src="demo.gif" width="880" height="576" loading="lazy" alt="The Test Bench dashboard runs a transfer test and shows it passing, then the Ledgerline accounts page, then the Recorder turning clicks into Playwright code with the URL and username moved to environment variables.">
+            <figcaption>Dashboard, Ledgerline and the Recorder.</figcaption>
+          </figure>
+          <figure>
+            <img src="demo-bank.png" width="1100" height="760" loading="lazy" alt="Ledgerline demo bank: sign-in page, accounts overview, a transfer receipt and an account's transaction history.">
+            <figcaption>Ledgerline: sign-in, accounts, a transfer receipt and history.</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
 
+    <!-- ============================================================ reports -->
+    <section class="block" id="reports" aria-labelledby="reports-title">
+      <div class="wrap">
+        <div class="section-head">
+          <div>
+            <p class="kicker">Evidence</p>
+            <h2 id="reports-title">Reports from the latest run</h2>
+            <p>Rebuilt by GitHub Actions on every push to main. None of it is a screenshot.</p>
+          </div>
+        </div>
+        <ul class="reports">
+          <li>
+            <a href="compliance/index.html">
+              <span class="report-name">Compliance evidence report</span>
+              <span class="report-result" id="r-compliance">…</span>
+              <span class="report-desc">Requirements, controls, the tests that prove them, every step and screenshot evidence, with SHA-256 hashes. Prints to PDF.</span>
+            </a>
+          </li>
+          <li>
+            <a href="api/api.html">
+              <span class="report-name">API tests (Postman + Newman)</span>
+              <span class="report-result" id="r-api">…</span>
+              <span class="report-desc">Chained requests against the dashboard's REST API: contracts, streaming, run history and negative cases.</span>
+            </a>
+          </li>
+          <li>
+            <a href="api/malicious-input.html">
+              <span class="report-name">Security tests (data-driven)</span>
+              <span class="report-result" id="r-security">…</span>
+              <span class="report-desc">Path traversal, script, SQL and command injection and oversized input, one CSV row per attack.</span>
+            </a>
+          </li>
+          <li>
+            <a href="https://github.com/abravebean/ledgerline-api-tests">
+              <span class="report-name">Java API suite</span>
+              <span class="report-result">GitHub</span>
+              <span class="report-desc">45 tests for the Ledgerline API in Java 17 with REST Assured, JUnit 5, Cucumber and Maven, run on every push and nightly.</span>
+            </a>
+          </li>
+          <li>
+            <a href="https://github.com/abravebean/Bank-automation-test-bench/blob/main/TEST_PLAN.md">
+              <span class="report-name">Risk-based test plan</span>
+              <span class="report-result">GitHub</span>
+              <span class="report-desc">Scope, approach by layer, risks ranked by impact and likelihood, entry and exit criteria.</span>
+            </a>
+          </li>
+          <li>
+            <a href="https://github.com/abravebean/Bank-automation-test-bench">
+              <span class="report-name">Source code</span>
+              <span class="report-result">GitHub</span>
+              <span class="report-desc">Playwright (TypeScript), Selenium, playwright-bdd, PostgreSQL, Docker, AWS CDK and the CI pipeline.</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <span>Built by <a href="https://github.com/abravebean">Kevin Tran</a> · <a href="https://linkedin.com/in/kevi-tran">LinkedIn</a></span>
+      <span>Ledgerline is fictional. No real bank, account or money is involved.</span>
+    </div>
+  </footer>
+
+  <!-- Excerpts shown in "Where the tests live", copied from the test files -->
+  <script type="text/plain" data-code="unit">
+// playwright/unit/demo-bank.spec.ts
+test('locks after 3 failures, even with the right password, and unlocks after 15 minutes', () => {
+  const c = clock();
+  const bank = new Bank({ now: c.now });
+  for (let i = 0; i < RULES.maxFailedLogins - 1; i++) expect(() => bank.login('jordan', 'wrong')).toThrow(/Invalid username or password/);
+  expect(() => bank.login('jordan', 'wrong')).toThrow(/Too many failed attempts/);
+  expect(() => bank.login('jordan', 'jordan_pass')).toThrow(/Too many failed attempts/);
+  c.advanceMinutes(14);
+  expect(() => bank.login('jordan', 'jordan_pass')).toThrow(/Too many failed attempts/);
+  c.advanceMinutes(1);
+  expect(bank.login('jordan', 'jordan_pass').customer.name).toBe('Jordan Lee');
+});
+  </script>
+  <script type="text/plain" data-code="api">
+// playwright/bank/bank-api.spec.ts
+test('20 simultaneous $100 transfers from a $1,000 balance: exactly 10 succeed, never overdrawn', async ({ request, playwright, baseURL }) => {
+  const customer = await createCustomer(request, { checkingCents: 100_000 });
+  const client = await signedInClient(playwright, baseURL!, customer);
+  const results = await Promise.all(
+    Array.from({ length: 20 }, () =>
+      client.post('/bank/api/transfers', {
+        data: { fromAccountId: customer.checking.id, toAccountId: customer.savings.id, amount: '100.00' },
+      })
+    )
+  );
+  const statuses = results.map((r) => r.status());
+  expect(statuses.filter((s) => s === 201)).toHaveLength(10);
+  expect(statuses.filter((s) => s === 422)).toHaveLength(10);
+  expect((await balances(client)).checking).toBe(0);
+  expect((await integrity(request)).ledgerMismatches).toEqual([]);
+});
+  </script>
+  <script type="text/plain" data-code="db">
+// playwright/api/run-history.spec.ts: the API's stats must match a direct SQL query
+const { rows } = await pool.query<{ total: number; passed: number; avg: number }>(
+  `SELECT COUNT(*)::int AS total,
+          COUNT(*) FILTER (WHERE passed)::int AS passed,
+          ROUND(AVG(duration_ms))::int AS avg
+     FROM test_runs WHERE test_name = $1`,
+  [SEEDED]
+);
+expect(seeded.totalRuns).toBe(rows[0].total);
+expect(seeded.passedRuns).toBe(rows[0].passed);
+expect(seeded.avgDurationMs).toBe(rows[0].avg);
+expect(seeded.passRate).toBe(0.5);
+expect(seeded.flaky).toBe(true); // passed once and failed once
+  </script>
+  <script type="text/plain" data-code="ui">
+// playwright/bank/bank-ui.spec.ts
+test('double-clicking Transfer moves the money once', async ({ page, accounts }) => {
+  await accounts.transferButton.click();
+  const transfer = new TransferPage(page);
+  await transfer.amount.fill('10.00');
+  await transfer.submit.dblclick();
+  await expect(transfer.receipt).toBeVisible();
+  await page.goto('/bank/#/accounts');
+  await expect(accounts.checking).toContainText('$990.00');
+});
+  </script>
+  <script type="text/plain" data-code="bdd">
+# features/transfer.feature
+Scenario Outline: Amount <amount> (<why>)
+  When I transfer "<amount>" from checking to savings
+  Then I see "<result>"
+  And my checking balance is "<checking>"
+
+  Examples: Accepted
+    | amount  | why                     | result            | checking |
+    | 0.01    | smallest allowed amount | Transfer complete | $999.99  |
+    | 1000.00 | exactly the balance     | Transfer complete | $0.00    |
+  </script>
+  <script type="text/plain" data-code="a11y">
+// playwright/a11y/dashboard-a11y.spec.ts
+const results = await new AxeBuilder({ page })
+  .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+  .analyze();
+  </script>
+  <script type="text/plain" data-code="java">
+// ledgerline-api-tests: TransferAmountBoundaryTest.java
+@ParameterizedTest(name = "\"{0}\" -> {1} ({2})")
+@CsvSource(textBlock = """
+        0,        400, zero: just below the smallest amount
+        0.01,     201, smallest valid amount
+        -5.00,    400, negative
+        1.234,    400, three decimal places
+        999.99,   201, one cent under the balance
+        1000.00,  201, exactly the balance
+        1000.01,  422, one cent over the balance
+        """)
+void amountIsValidatedAtItsBoundaries(String amount, int expectedStatus, String why) {
+  </script>
+  <script type="text/plain" data-code="postman">
+// postman/malicious-input.postman_collection.json, run once per CSV row
+const expected = Number(pm.iterationData.get('expectedStatus'));
+const kind = pm.iterationData.get('kind');
+pm.test(`${kind}: returns ${expected}`, () => pm.response.to.have.status(expected));
+pm.test(`${kind}: nothing ran (no NDJSON stream)`, () => {
+  pm.expect(pm.response.headers.get('Content-Type') || '').to.not.match(/ndjson/);
+});
+  </script>
+  <script type="text/plain" data-code="infra">
+// infra/test/stack.test.ts
+it('is PostgreSQL 16, encrypted, and not publicly accessible', () => {
+  template.hasResourceProperties('AWS::RDS::DBInstance', {
+    Engine: 'postgres',
+    EngineVersion: Match.stringLikeRegexp('^16'),
+    StorageEncrypted: true,
+    PubliclyAccessible: false,
+  });
+});
+  </script>
+  <script src="ledgerline-engine.js"></script>
   <script>
+  (() => {
+    'use strict';
     const $ = (id) => document.getElementById(id);
+    const REPO = 'https://github.com/abravebean/Bank-automation-test-bench/blob/main/';
+    const JAVA = 'https://github.com/abravebean/ledgerline-api-tests/blob/main/src/test/';
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const sleep = (ms) => new Promise((r) => setTimeout(r, reduced ? 0 : ms));
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
-    function setResult(id, ok, text) {
-      const el = $(id);
-      el.textContent = text;
-      el.className = `report-result ${ok === null ? 'pending' : ok ? 'pass' : 'fail'}`;
+    let evidence = null;          // compliance/evidence.json from the latest CI run
+    let requirements = [];        // requirement records (with tests when evidence loaded)
+    const testsByLoc = new Map(); // "unit/demo-bank.spec.ts:61" -> [test records]
+
+    // ================================================================ engine + fake HTTP
+    const Engine = window.LedgerlineEngine;
+    const money = (c) => Engine.formatCents(c);
+    let bank, token, alex;
+
+    function freshBank() {
+      bank = new Engine.Bank();
+      const s = bank.login('demo_user', 'demo_pass');
+      token = s.token;
+      alex = s.customer;
     }
 
-    // Postman/Newman writes JUnit XML next to each HTML report.
-    async function junit(url) {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(res.status);
-      const doc = new DOMParser().parseFromString(await res.text(), 'application/xml');
-      const cases = doc.querySelectorAll('testcase').length;
-      const failed = doc.querySelectorAll('testcase failure, testcase error').length;
-      return { cases, failed };
-    }
-
-    async function load() {
-      let allOk = true;
-      let anyResult = false;
-
+    /** Calls the engine the way the HTTP router does and returns { status, body }. */
+    function call(fn, okStatus = 200) {
       try {
-        const ev = await (await fetch('compliance/evidence.json')).json();
-        const r = ev.totals.requirements;
-        $('c-passed').textContent = r.passed ?? 0;
-        $('c-failed').textContent = r.failed ?? 0;
-        $('c-notrun').textContent = r['not-run'] ?? 0;
-        $('c-notests').textContent = r['no-tests'] ?? 0;
-        $('counts').hidden = false;
-        const failed = r.failed ?? 0;
-        setResult('r-compliance', failed === 0, failed ? `${failed} failed` : `${r.passed ?? 0} of ${ev.requirements.length} passed`);
-        allOk = allOk && failed === 0;
-        anyResult = true;
-
-        const when = new Date(ev.run.startedAt || ev.generatedAt);
-        const commit = ev.run.commit ? ev.run.commit.slice(0, 7) : null;
-        $('run-meta').innerHTML = `Last run ${when.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}` +
-          (commit ? ` · commit <a href="https://github.com/abravebean/Bank-automation-test-bench/commit/${ev.run.commit}"><code>${commit}</code></a>` : '') +
-          (ev.run.ciRun ? ` · <a href="${ev.run.ciRun}">CI run</a>` : '');
-      } catch {
-        setResult('r-compliance', null, 'not in this build');
+        const body = fn();
+        return { status: body && body.replayed ? 200 : okStatus, body };
+      } catch (err) {
+        if (!(err instanceof Engine.BankError)) throw err;
+        return { status: err.status, body: { error: err.message, ...(err.field ? { field: err.field } : {}) } };
       }
+    }
+    const api = {
+      login: (u, p) => call(() => bank.login(u, p)),
+      transfer: (customer, from, to, amount, key) => call(() => bank.transfer(customer, { fromAccountId: from, toAccountId: to, amount }, key), 201),
+      history: (customer, id) => call(() => bank.history(customer, id)),
+    };
+    const acctOf = (customer, type) => bank.accountsFor(customer).find((a) => a.type === type);
+    let custSeq = 0;
+    function testCustomer(name, checkingCents, savingsCents) {
+      const username = `${name.toLowerCase()}_${++custSeq}`;
+      const password = `pw-${Math.random().toString(36).slice(2, 10)}`;
+      const customer = bank.createCustomer({ username, password, name, checkingCents, savingsCents });
+      return { customer, username, password };
+    }
 
-      for (const [id, file] of [['r-api', 'api/api.xml'], ['r-security', 'api/malicious-input.xml']]) {
-        try {
-          const { cases, failed } = await junit(file);
-          setResult(id, failed === 0, failed ? `${failed} of ${cases} failed` : `${cases} checks passed`);
-          allOk = allOk && failed === 0;
-          anyResult = true;
-        } catch {
-          setResult(id, null, 'not in this build');
+    // ================================================================ account panel
+    const shown = new Map();
+    function renderAccounts() {
+      const box = $('accts');
+      const accounts = bank.accountsFor(alex);
+      if (!box.children.length) {
+        box.innerHTML = accounts.map((a) => `
+          <div class="acct" id="acct-${a.type}">
+            <div class="acct-name">${esc(a.name)}</div>
+            <div class="acct-bal" data-testid="balance-${a.type}">${money(a.balanceCents)}</div>
+            <div class="acct-num">••••${esc(a.number)}</div>
+          </div>`).join('');
+        accounts.forEach((a) => shown.set(a.type, a.balanceCents));
+        fillTransferForm(accounts);
+      }
+      for (const a of accounts) {
+        const before = shown.get(a.type);
+        if (before !== a.balanceCents) {
+          tween($(`acct-${a.type}`).querySelector('.acct-bal'), before, a.balanceCents);
+          const card = $(`acct-${a.type}`);
+          card.classList.add(a.balanceCents < before ? 'flash-down' : 'flash-up');
+          setTimeout(() => card.classList.remove('flash-down', 'flash-up'), 700);
+          shown.set(a.type, a.balanceCents);
         }
       }
+      const used = bank.transferredToday(alex);
+      const limit = Engine.RULES.dailyTransferLimitCents;
+      $('limit-text').textContent = `Transferred today: ${money(used)} of ${money(limit)}`;
+      $('limit-bar').style.width = `${Math.min(100, (used / limit) * 100)}%`;
+    }
+    function tween(el, from, to) {
+      if (reduced) { el.textContent = money(to); return; }
+      const start = performance.now();
+      const step = (t) => {
+        const k = Math.min(1, (t - start) / 650);
+        const e = 1 - Math.pow(1 - k, 3);
+        el.textContent = money(Math.round(from + (to - from) * e));
+        if (k < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    }
 
-      const stamp = $('stamp');
-      if (!anyResult) {
-        stamp.textContent = 'No results yet';
-        stamp.className = 'stamp pending';
+    // ================================================================ the receipt printer
+    let receiptNo = 0;
+    const tape = {
+      body: $('tape-body'),
+      start(title) {
+        receiptNo++;
+        $('tape-sub').textContent = `TEST RECEIPT · NO. ${String(receiptNo).padStart(4, '0')} · ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`;
+        this.body.innerHTML = '';
+        this.add('title', title);
+        this.add('sep', '');
+      },
+      add(cls, text) {
+        const d = document.createElement('div');
+        d.className = `ln ${cls}`;
+        d.textContent = text;
+        this.body.appendChild(d);
+        this.body.scrollTop = this.body.scrollHeight;
+        return d;
+      },
+      async line(cls, text, wait = 170) { this.add(cls, text); await sleep(wait); },
+      req(method, path, body) { return this.line('req', `${method} ${path}${body ? ' ' + JSON.stringify(body) : ''}`, 260); },
+      res(r) {
+        const msg = r.body && r.body.error ? `  ${r.body.error}` : '';
+        return this.line(`res ${r.status < 300 ? 'ok' : 'err'}`, `${r.status} ${statusText(r.status)}${msg}`, 300);
+      },
+      check(ok, text) { return this.line(ok ? 'chk' : 'bad', text, 200); },
+      note(text) { return this.line('note', text, 150); },
+      html(node) { this.body.appendChild(node); this.body.scrollTop = this.body.scrollHeight; },
+      stamp(text, sub, ok = false) {
+        const row = document.createElement('div');
+        row.className = 'stamp-row';
+        row.setAttribute('aria-hidden', 'true');
+        row.innerHTML = `<div class="big-stamp ${ok ? 'ok' : ''}" data-testid="stamp">${esc(text)}<small>${esc(sub)}</small></div>`;
+        this.html(row);
+      },
+      async why(text) { const d = this.add('why', text); await sleep(200); return d; },
+    };
+    function statusText(s) {
+      return ({ 200: 'OK', 201: 'Created', 400: 'Bad Request', 401: 'Unauthorized', 404: 'Not Found', 409: 'Conflict', 422: 'Unprocessable', 423: 'Locked' })[s] || '';
+    }
+
+    // ================================================================ attacks
+    // Each attack names the tests that prove the rule (file:line from the Playwright suite,
+    // plus the Java suite). Results for the TypeScript tests come from the latest CI run.
+    const ATTACKS = [
+      {
+        id: 'overdraft', title: 'Spend money you don’t have',
+        pitch: 'Transfer one cent more than Alex’s checking balance.',
+        tags: ['R18', 'Boundary value'], req: 'R18',
+        tests: ['bank/bank-api.spec.ts:34', 'unit/demo-bank.spec.ts:61', 'bank/bank-ui.spec.ts:53'],
+        java: [['java/com/ledgerline/api/tests/TransferAmountBoundaryTest.java', 'TransferAmountBoundaryTest · "1000.01" → 422']],
+        why: 'The balance check and the debit happen in one step, so there’s no gap to slip through. The tests hit the exact balance, then one cent more.',
+        async run() {
+          const chk = acctOf(alex, 'checking'), sav = acctOf(alex, 'savings');
+          const before = chk.balanceCents;
+          const amount = Engine.formatCents(before + 1).replace(/[$,]/g, '');
+          await tape.note(`Checking balance is ${money(before)}.`);
+          await tape.req('POST', '/bank/api/transfers', { from: 'checking', to: 'savings', amount });
+          const r = api.transfer(alex, chk.id, sav.id, amount);
+          await tape.res(r);
+          renderAccounts();
+          await tape.check(r.status === 422, 'Refused with 422, and the field is flagged');
+          await tape.check(chk.balanceCents === before, `Checking is still ${money(chk.balanceCents)}`);
+          return r.status === 422 && chk.balanceCents === before;
+        },
+      },
+      {
+        id: 'amounts', title: 'Sneak in a weird amount',
+        pitch: 'Zero, negative, three decimals, scientific notation, words.',
+        tags: ['R17', 'Equivalence partitions'], req: 'R17',
+        tests: ['bank/bank-api.spec.ts:19', 'unit/demo-bank.spec.ts:46', 'bank/bank-ui.spec.ts:80'],
+        java: [['java/com/ledgerline/api/tests/TransferAmountBoundaryTest.java', 'TransferAmountBoundaryTest · @ParameterizedTest table'], ['resources/features/transfers.feature', 'transfers.feature · Scenario Outline']],
+        why: 'Boundary value analysis: test just below, at and just above every edge, plus one value from each kind of wrong input.',
+        async run() {
+          const chk = acctOf(alex, 'checking'), sav = acctOf(alex, 'savings');
+          const before = chk.balanceCents;
+          let all = true;
+          for (const amount of ['0', '-5.00', '1.234', '1e2', 'ten', '', '1000000.01']) {
+            await tape.req('POST', '/bank/api/transfers', { amount });
+            const r = api.transfer(alex, chk.id, sav.id, amount);
+            await tape.res(r);
+            all = all && r.status === 400;
+          }
+          await tape.check(all, 'All 7 refused with 400 before any money moved');
+          await tape.check(chk.balanceCents === before, `Checking unchanged at ${money(before)}`);
+          return all && chk.balanceCents === before;
+        },
+      },
+      {
+        id: 'idor', title: 'Take someone else’s money',
+        pitch: 'Swap Jordan’s account ID into Alex’s transfer request.',
+        tags: ['R19', 'OWASP A01 · IDOR'], req: 'R19',
+        tests: ['bank/bank-api.spec.ts:100', 'bank/bank-api.spec.ts:90', 'bank/bank-ui.spec.ts:90'],
+        java: [['java/com/ledgerline/api/tests/AuthorizationTest.java', 'AuthorizationTest · cannotTransferFromSomeoneElsesAccount']],
+        why: '404, not 403: the API won’t even confirm Jordan’s account exists, so there’s nothing to enumerate.',
+        async run() {
+          const jordan = bank.customers.get('jordan');
+          const theirs = acctOf(jordan, 'checking');
+          const before = theirs.balanceCents;
+          await tape.note(`Jordan’s checking is ${theirs.id}.`);
+          await tape.req('GET', `/bank/api/accounts/${theirs.id}/transactions`);
+          const h = api.history(alex, theirs.id);
+          await tape.res(h);
+          await tape.req('POST', '/bank/api/transfers', { fromAccountId: theirs.id, toAccountId: acctOf(alex, 'savings').id, amount: '500.00' });
+          const r = api.transfer(alex, theirs.id, acctOf(alex, 'savings').id, '500.00');
+          await tape.res(r);
+          await tape.check(h.status === 404 && r.status === 404, 'Both answered 404 Account not found');
+          await tape.check(theirs.balanceCents === before, `Jordan still has ${money(theirs.balanceCents)}`);
+          return h.status === 404 && r.status === 404 && theirs.balanceCents === before;
+        },
+      },
+      {
+        id: 'double', title: 'Double-click Transfer',
+        pitch: 'Send the same $25.00 transfer twice with the same Idempotency-Key.',
+        tags: ['R22', 'Idempotency'], req: 'R22',
+        tests: ['bank/bank-api.spec.ts:186', 'unit/demo-bank.spec.ts:175', 'bank/bank-ui.spec.ts:63'],
+        java: [['java/com/ledgerline/api/tests/IdempotencyAndConcurrencyTest.java', 'IdempotencyAndConcurrencyTest · idempotentReplay'], ['resources/features/transfers.feature', 'transfers.feature · Pressing "Transfer" twice']],
+        why: 'The bank remembers the key and replays the first answer instead of moving money twice. The UI test double-clicks the real button.',
+        async run() {
+          const chk = acctOf(alex, 'checking'), sav = acctOf(alex, 'savings');
+          const before = chk.balanceCents;
+          const key = `click-${Date.now().toString(36)}`;
+          await tape.req('POST', '/bank/api/transfers', { amount: '25.00', 'Idempotency-Key': key });
+          const a = api.transfer(alex, chk.id, sav.id, '25.00', key);
+          await tape.res(a);
+          renderAccounts();
+          await tape.req('POST', '/bank/api/transfers', { amount: '25.00', 'Idempotency-Key': key });
+          const b = api.transfer(alex, chk.id, sav.id, '25.00', key);
+          await tape.line('res ok', `200 OK  Idempotent-Replay: true`, 300);
+          const same = a.body.transfer && b.body.transfer && a.body.transfer.id === b.body.transfer.id;
+          await tape.check(same, `Same transfer returned both times (${a.body.transfer ? a.body.transfer.reference : '?'})`);
+          await tape.check(chk.balanceCents === before - 2500, `Money moved once: ${money(before)} → ${money(chk.balanceCents)}`);
+          return same && chk.balanceCents === before - 2500;
+        },
+      },
+      {
+        id: 'race', title: 'Fire 20 transfers at once',
+        pitch: '20 simultaneous $100.00 transfers from an account holding $1,000.00.',
+        tags: ['R22', 'CWE-362 race condition'], req: 'R22',
+        tests: ['bank/bank-api.spec.ts:214'],
+        java: [['java/com/ledgerline/api/tests/IdempotencyAndConcurrencyTest.java', 'IdempotencyAndConcurrencyTest · 20 threads + CountDownLatch']],
+        why: 'The race condition every payments team worries about. The API test fires 20 requests in parallel; the Java test does it with 20 threads released by a latch.',
+        async run() {
+          const t = testCustomer('Sam', 100_000, 0);
+          const chk = acctOf(t.customer, 'checking'), sav = acctOf(t.customer, 'savings');
+          await tape.note(`Opened a test customer, Sam, with ${money(100_000)} in checking.`);
+          await tape.req('POST ×20', '/bank/api/transfers', { amount: '100.00' });
+          const grid = document.createElement('div');
+          grid.className = 'race';
+          grid.setAttribute('aria-hidden', 'true');
+          grid.innerHTML = Array.from({ length: 20 }, (_, i) => `<i>${i + 1}</i>`).join('');
+          const bal = document.createElement('div');
+          bal.className = 'ln note';
+          bal.textContent = `Sam’s checking: ${money(chk.balanceCents)}`;
+          tape.html(grid); tape.html(bal);
+          const cells = [...grid.children];
+          cells.forEach((c) => c.classList.add('fly'));
+          // Requests land in random order. Each debit is atomic, so order can't matter.
+          const statuses = await Promise.all(cells.map(async (cell) => {
+            await sleep(120 + Math.random() * 1100);
+            const r = api.transfer(t.customer, chk.id, sav.id, '100.00');
+            cell.classList.remove('fly');
+            cell.classList.add(r.status === 201 ? 'ok' : 'no');
+            bal.textContent = `Sam’s checking: ${money(chk.balanceCents)}`;
+            return r.status;
+          }));
+          const ok = statuses.filter((s) => s === 201).length;
+          await tape.line('res ok', `${ok} × 201 Created   ${20 - ok} × 422 Insufficient funds`, 300);
+          await tape.check(ok === 10, 'Exactly 10 succeeded');
+          await tape.check(chk.balanceCents === 0, `Balance ended at ${money(chk.balanceCents)}, never below zero`);
+          await tape.check(sav.balanceCents === 100_000, `Savings received exactly ${money(sav.balanceCents)}`);
+          return ok === 10 && chk.balanceCents === 0;
+        },
+      },
+      {
+        id: 'limit', title: 'Blow past the daily limit',
+        pitch: 'Move $2,000.00, then $500.01 more on the same day.',
+        tags: ['R18', 'Business rule'], req: 'R18',
+        tests: ['bank/bank-api.spec.ts:47', 'unit/demo-bank.spec.ts:69', 'unit/demo-bank.spec.ts:78'],
+        java: [['java/com/ledgerline/api/tests/BusinessRulesTest.java', 'BusinessRulesTest · dailyTransferLimit']],
+        why: 'Tested at the exact boundary: $2,500.00 is allowed and one more cent is not. Another test moves an injected clock past midnight UTC to prove the limit resets.',
+        async run() {
+          const t = testCustomer('Riley', 0, 1_000_000);
+          const sav = acctOf(t.customer, 'savings'), chk = acctOf(t.customer, 'checking');
+          await tape.note(`Opened a test customer, Riley, with ${money(1_000_000)} in savings.`);
+          const steps = [['2000.00', 201], ['500.01', 422], ['500.00', 201], ['0.01', 422]];
+          let all = true;
+          for (const [amount, expected] of steps) {
+            await tape.req('POST', '/bank/api/transfers', { amount });
+            const r = api.transfer(t.customer, sav.id, chk.id, amount);
+            await tape.res(r);
+            all = all && r.status === expected;
+          }
+          await tape.check(all, 'Allowed up to $2,500.00 exactly, refused every cent after');
+          await tape.check(bank.transferredToday(t.customer) === 250_000, `Transferred today: ${money(bank.transferredToday(t.customer))}`);
+          return all;
+        },
+      },
+      {
+        id: 'brute', title: 'Guess the password',
+        pitch: 'Three wrong guesses, then the real password on try four.',
+        tags: ['R20', 'OWASP A07 · lockout'], req: 'R20',
+        tests: ['bank/bank-api.spec.ts:132', 'unit/demo-bank.spec.ts:107', 'bank/bank-ui.spec.ts:117'],
+        java: [['java/com/ledgerline/api/tests/SignInSecurityTest.java', 'SignInSecurityTest · lockoutAfterThreeFailures'], ['resources/features/security.feature', 'security.feature · Three wrong passwords']],
+        why: 'Even the right password is refused while the account is locked, so a lucky fourth guess still fails. The unit test fast-forwards a fake clock 15 minutes to prove it unlocks.',
+        async run() {
+          const t = testCustomer('Casey', 10_000, 0);
+          await tape.note(`Target: a test customer, ${t.username}.`);
+          const results = [];
+          for (const pw of ['password1', 'letmein', 'casey2024']) {
+            await tape.req('POST', '/bank/api/login', { username: t.username, password: pw });
+            const r = api.login(t.username, pw);
+            await tape.res(r);
+            results.push(r.status);
+          }
+          await tape.req('POST', '/bank/api/login', { username: t.username, password: '•••••••• (correct)' });
+          const real = api.login(t.username, t.password);
+          await tape.res(real);
+          await tape.check(results.join() === '401,401,423', 'Locked on the third failure');
+          await tape.check(real.status === 423, 'The correct password is refused while locked');
+          return real.status === 423;
+        },
+      },
+      {
+        id: 'enum', title: 'Find out who banks here',
+        pitch: 'Compare the errors for a real username and a made-up one.',
+        tags: ['R20', 'Username enumeration'], req: 'R20',
+        tests: ['bank/bank-api.spec.ts:143', 'unit/demo-bank.spec.ts:119'],
+        java: [['java/com/ledgerline/api/tests/SignInSecurityTest.java', 'SignInSecurityTest · noUsernameEnumeration']],
+        why: 'Different messages would tell an attacker which usernames are worth attacking. Lockout counts attempts for made-up names too, for the same reason.',
+        async run() {
+          const real = testCustomer('Morgan', 10_000, 0).username;
+          const fake = `nobody_${Math.random().toString(36).slice(2, 7)}`;
+          const seen = {};
+          for (const u of [real, fake]) {
+            await tape.note(u === real ? `Real customer: ${u}` : `Made-up name: ${u}`);
+            seen[u] = [];
+            for (let i = 0; i < 3; i++) {
+              const r = api.login(u, 'wrong');
+              seen[u].push(`${r.status} ${r.body.error}`);
+            }
+            await tape.line('res err', seen[u].map((s) => s.split(' ')[0]).join(' → ') + `  "${seen[u][0].slice(4)}"`, 300);
+          }
+          const same = JSON.stringify(seen[real]) === JSON.stringify(seen[fake]);
+          await tape.check(same, 'Identical status codes and messages for both');
+          return same;
+        },
+      },
+      {
+        id: 'ledger', title: 'Make money appear',
+        pitch: 'Throw 500 random transfers at the bank and check the books.',
+        tags: ['R21', 'Ledger reconciliation'], req: 'R21',
+        tests: ['unit/demo-bank.spec.ts:135', 'bank/bank-api.spec.ts:169', 'unit/demo-bank.spec.ts:164'],
+        java: [['java/com/ledgerline/api/tests/BusinessRulesTest.java', 'BusinessRulesTest · historyRunningBalance']],
+        why: 'Money can move but never appear or vanish, and every balance must equal the sum of its ledger entries. This fuzz test runs on every commit.',
+        async run() {
+          let day = Date.UTC(2026, 0, 5);
+          const fuzz = new Engine.Bank({ now: () => new Date(day) });
+          const people = Array.from({ length: 6 }, (_, i) => fuzz.createCustomer({ username: `f${i}`, password: 'x', name: `F${i}`, checkingCents: 50_000 + i * 7_000, savingsCents: 120_000 }));
+          const before = fuzz.totalHoldingsCents();
+          await tape.note(`Fresh bank with 8 customers. Total held: ${money(before)}.`);
+          const meter = document.createElement('div');
+          meter.className = 'meter'; meter.innerHTML = '<span></span>';
+          const label = tape.add('note', 'Transfers: 0 accepted, 0 refused');
+          tape.html(meter);
+          let ok = 0, refused = 0;
+          for (let i = 1; i <= 500; i++) {
+            const c = people[Math.floor(Math.random() * people.length)];
+            const [a, b] = Math.random() < 0.5 ? [0, 1] : [1, 0];
+            const amount = (Math.random() < 0.15 ? Math.random() * 4000 : Math.random() * 600).toFixed(2);
+            const r = call(() => fuzz.transfer(c, { fromAccountId: c.accountIds[a], toAccountId: c.accountIds[b], amount }), 201);
+            r.status === 201 ? ok++ : refused++;
+            if (i % 60 === 0) day += 86_400_000; // a new day now and then, so limits reset
+            if (i % 25 === 0) {
+              meter.firstChild.style.width = `${(i / 500) * 100}%`;
+              label.textContent = `Transfers: ${ok} accepted, ${refused} refused`;
+              await sleep(28);
+            }
+          }
+          const after = fuzz.totalHoldingsCents();
+          const mismatches = fuzz.ledgerMismatches();
+          await tape.check(after === before, `Total held after: ${money(after)} (unchanged)`);
+          await tape.check(mismatches.length === 0, `Accounts that don’t match their ledger: ${mismatches.length}`);
+          return after === before && mismatches.length === 0;
+        },
+      },
+    ];
+
+    // ================================================================ playground UI
+    const tried = new Set();
+    let held = 0, through = 0, running = false;
+
+    function renderAttacks() {
+      $('total-attacks').textContent = ATTACKS.length;
+      $('pips').innerHTML = ATTACKS.map((a) => `<i id="pip-${a.id}"></i>`).join('');
+      $('attacks').innerHTML = ATTACKS.map((a, i) => `
+        <li>
+          <button type="button" class="attack" id="attack-${a.id}" data-id="${a.id}" aria-describedby="pitch-${a.id}">
+            <span class="attack-n">ATTACK ${String(i + 1).padStart(2, '0')}</span>
+            <span class="attack-title">${esc(a.title)}</span>
+            <span class="attack-result" id="res-${a.id}" aria-hidden="true">BLOCKED</span>
+            <span class="attack-pitch" id="pitch-${a.id}">${esc(a.pitch)}</span>
+            <span class="attack-tags">${a.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</span>
+          </button>
+        </li>`).join('');
+      $('attacks').addEventListener('click', (e) => {
+        const btn = e.target.closest('.attack');
+        if (btn) runAttack(ATTACKS.find((a) => a.id === btn.dataset.id));
+      });
+    }
+
+    function setBusy(busy) {
+      running = busy;
+      document.querySelectorAll('.attack, #fp-send, #reset').forEach((b) => b.setAttribute('aria-disabled', String(busy)));
+    }
+
+    async function runAttack(attack) {
+      if (running) return;
+      setBusy(true);
+      document.querySelectorAll('.attack').forEach((b) => b.removeAttribute('aria-current'));
+      $(`attack-${attack.id}`).setAttribute('aria-current', 'true');
+      if (matchMedia('(max-width: 980px)').matches) $('tape').scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' });
+      tape.start(attack.title.toUpperCase());
+      let blocked = false;
+      try {
+        blocked = await attack.run();
+      } catch (err) {
+        tape.add('bad', `Playground error: ${err.message}`);
+      }
+      renderAccounts();
+      await tape.line('sep', '', 0);
+      if (blocked) {
+        tape.stamp('BLOCKED', 'TEST PASSED');
+        $(`res-${attack.id}`).className = 'attack-result on';
       } else {
-        stamp.textContent = allOk ? '✓ All checks passing' : '✗ Some checks failing';
-        stamp.className = `stamp ${allOk ? 'pass' : 'fail'}`;
+        tape.stamp('GOT IN', 'FILE A BUG', false);
+        $(`res-${attack.id}`).textContent = 'GOT IN';
+        $(`res-${attack.id}`).className = 'attack-result on';
+      }
+      await tape.why(attack.why);
+      tape.html(proofBlock(attack));
+      if (!tried.has(attack.id)) {
+        tried.add(attack.id);
+        blocked ? held++ : through++;
+        $(`pip-${attack.id}`).classList.add('done');
+      }
+      $('tried').textContent = tried.size;
+      $('through').textContent = through;
+      $('announce').textContent = `${attack.title}: ${blocked ? 'blocked' : 'got through'}. Proven by requirement ${attack.req}.`;
+      if (tried.size === ATTACKS.length && through === 0 && !$('victory').innerHTML) {
+        $('victory').innerHTML = `<div class="victory" role="status"><div class="seal" aria-hidden="true">✓</div><div><strong>Ledgerline held against all ${ATTACKS.length} attacks.</strong>Every one is an automated test that runs on every commit, in TypeScript and in Java. That’s what a regression suite is for.</div></div>`;
+      }
+      setBusy(false);
+    }
+
+    function proofBlock(attack) {
+      const box = document.createElement('div');
+      box.className = 'proof';
+      const req = requirements.find((r) => r.id === attack.req);
+      const reqStatus = req && req.status ? req.status : null;
+      const items = attack.tests.map((loc) => {
+        const group = testsByLoc.get(loc) || [];
+        const [file, line] = loc.split(':');
+        const outcome = group.length ? (group.some((t) => t.outcome === 'failed') ? 'failed' : group.every((t) => t.outcome === 'passed' || t.outcome === 'flaky') ? 'passed' : 'unknown') : 'unknown';
+        const icon = outcome === 'passed' ? '✓' : outcome === 'failed' ? '✗' : '•';
+        let title = group[0] ? group[0].title : '';
+        if (group.length > 1) title = `${title.split(' › ')[0]} · ${group.length} cases`;
+        else title = title.split(' › ').slice(-1)[0];
+        const ms = group.reduce((s, t) => s + (t.durationMs || 0), 0);
+        const meta = outcome === 'passed' ? ` · passed in CI${ms ? `, ${ms} ms` : ''}` : outcome === 'failed' ? ' · FAILED in CI' : '';
+        return `<li><span class="o ${outcome}" aria-hidden="true">${icon}</span><a href="${REPO}playwright/${file}#L${line}"><span class="file">${esc(file.split('/').pop())}:${line}</span><span class="lang">TS</span><span class="t">${esc(title || 'Playwright test')}${esc(meta)}</span></a></li>`;
+      });
+      const java = attack.java.map(([path, label]) => `<li><span class="o unknown" aria-hidden="true">•</span><a href="${JAVA}${path}"><span class="file">${esc(label.split(' · ')[0])}</span><span class="lang">${path.endsWith('.feature') ? 'BDD' : 'JAVA'}</span><span class="t">${esc(label.split(' · ').slice(1).join(' · '))}</span></a></li>`);
+      box.innerHTML = `
+        <div class="proof-title">Proven by
+          <button type="button" class="req-pill" data-req="${attack.req}">${attack.req}</button>
+          <span>${esc(req ? req.control.split(':')[0] : '')}</span>
+          ${reqStatus ? `<span class="st ${reqStatus}">${reqStatus === 'passed' ? '● passing in latest run' : '● ' + reqStatus}</span>` : ''}
+        </div>
+        <ul>${items.join('')}${java.join('')}</ul>`;
+      box.querySelector('.req-pill').addEventListener('click', () => openRequirement(attack.req));
+      return box;
+    }
+
+    // ---------------------------------------------------------------- free play
+    function fillTransferForm(accounts) {
+      const opts = accounts.map((a) => `<option value="${a.id}">${esc(a.name)}</option>`).join('');
+      $('fp-from').innerHTML = opts;
+      $('fp-to').innerHTML = opts;
+      $('fp-to').selectedIndex = 1;
+    }
+    const HINTS = ['25.00', '0', '0.01', '12.345', '-20', '1e3', '99999'];
+    $('fp-hints').insertAdjacentHTML('beforeend', HINTS.map((h) => `<button type="button" class="chip" data-v="${h}">${h}</button>`).join(''));
+    $('fp-hints').addEventListener('click', (e) => {
+      const c = e.target.closest('.chip');
+      if (c) { $('fp-amount').value = c.dataset.v; $('fp-amount').focus(); }
+    });
+
+    $('freeplay').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (running) return;
+      setBusy(true);
+      const from = $('fp-from').value, to = $('fp-to').value, amount = $('fp-amount').value;
+      tape.start('YOUR TRANSFER');
+      await tape.req('POST', '/bank/api/transfers', { from: bank.accounts.get(from).type, to: bank.accounts.get(to).type, amount });
+      const r = api.transfer(alex, from, to, amount);
+      await tape.res(r);
+      renderAccounts();
+      await tape.line('sep', '', 0);
+      let covering;
+      if (r.status === 201) {
+        tape.stamp('APPROVED', `REF ${r.body.transfer.reference}`, true);
+        await tape.why('A normal transfer. The UI test does exactly this through a real browser, then checks the receipt, both balances and the history.');
+        covering = { req: 'R18', tests: ['bank/bank-ui.spec.ts:26', 'bank/bank-api.spec.ts:70'], java: [['resources/features/transfers.feature', 'transfers.feature · A transfer moves money']] };
+      } else {
+        tape.stamp('REFUSED', `${r.status} ${statusText(r.status).toUpperCase()}`);
+        const e2 = r.body.error || '';
+        if (r.body.field === 'amount' && r.status === 400) {
+          await tape.why('You hit an input-validation rule. The boundary tables in the unit, API, UI and Java suites cover this.');
+          covering = ATTACKS.find((a) => a.id === 'amounts');
+        } else if (e2.startsWith('Insufficient')) {
+          await tape.why('Not enough money. The balance boundary is tested at exactly the balance and one cent over.');
+          covering = ATTACKS.find((a) => a.id === 'overdraft');
+        } else if (e2.startsWith('Daily')) {
+          await tape.why('You reached the $2,500.00 daily limit. It’s tested at the exact boundary and across midnight UTC.');
+          covering = ATTACKS.find((a) => a.id === 'limit');
+        } else {
+          await tape.why('Source and destination must be different accounts.');
+          covering = { req: 'R18', tests: ['bank/bank-api.spec.ts:61', 'unit/demo-bank.spec.ts:88'], java: [['java/com/ledgerline/api/tests/BusinessRulesTest.java', 'BusinessRulesTest · sameAccountIsRejected']] };
+        }
+      }
+      tape.html(proofBlock(covering));
+      $('announce').textContent = `Transfer ${r.status === 201 ? 'approved' : 'refused: ' + (r.body.error || '')}`;
+      setBusy(false);
+    });
+
+    $('reset').addEventListener('click', () => {
+      if (running) return;
+      freshBank();
+      $('accts').innerHTML = '';
+      renderAccounts();
+      tape.start('BANK RESET');
+      tape.add('note', 'Fresh bank: Alex Rivera and Jordan Lee are back to their opening balances.');
+    });
+
+    // ================================================================ CI results
+    async function loadEvidence() {
+      try {
+        const res = await fetch('compliance/evidence.json', { cache: 'no-store' });
+        if (!res.ok) throw new Error(res.status);
+        evidence = await res.json();
+        requirements = evidence.requirements;
+        const seen = new Set();
+        for (const r of requirements) for (const t of r.tests) {
+          if (seen.has(t.id)) continue;
+          seen.add(t.id);
+          const key = `${t.file}:${t.line}`;
+          if (!testsByLoc.has(key)) testsByLoc.set(key, []);
+          testsByLoc.get(key).push(t);
+        }
+      } catch {
+        evidence = null;
+        try {
+          const res = await fetch('requirements.json');
+          requirements = (await res.json()).requirements.map((r) => ({ ...r, tests: [], status: null }));
+        } catch { requirements = []; }
       }
     }
 
-    load();
+    function renderStatus() {
+      const v = $('verdict');
+      if (!evidence) {
+        countUp();
+        v.textContent = 'NO RESULTS YET';
+        $('run-meta').textContent = 'Results appear here after the next CI run on main.';
+        $('r-compliance').textContent = 'not in this build';
+        return;
+      }
+      const t = evidence.totals.requirements;
+      const total = requirements.length;
+      const failed = t.failed || 0;
+      v.textContent = failed ? `✗ ${failed} FAILING` : '✓ ALL PASSING';
+      v.className = `verdict-stamp ${failed ? 'fail' : 'pass'}`;
+      const when = new Date(evidence.run.startedAt || evidence.generatedAt);
+      const commit = evidence.run.commit;
+      $('run-meta').innerHTML = `Ran ${esc(when.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }))}` +
+        (commit ? ` · commit <a href="https://github.com/abravebean/Bank-automation-test-bench/commit/${esc(commit)}"><code>${esc(commit.slice(0, 7))}</code></a>` : '') +
+        (evidence.run.ciRun ? ` · <a href="${esc(evidence.run.ciRun)}">CI log</a>` : '');
+      const order = [['passed', 'passed'], ['failed', 'failed'], ['not-run', 'not run'], ['no-tests', 'no tests yet']];
+      const bar = $('reqbar').children;
+      order.forEach(([k], i) => { requestAnimationFrame(() => { bar[i].style.width = `${((t[k] || 0) / total) * 100}%`; }); });
+      $('reqlegend').innerHTML = order.filter(([k]) => t[k]).map(([k, label]) => `<li><span class="dot ${k}"></span><b>${t[k]}</b> ${label}</li>`).join('');
+      const unique = new Set();
+      for (const r of requirements) for (const t of r.tests) unique.add(`${t.file}:${t.line}:${t.title}`);
+      for (const t of evidence.untraced || []) unique.add(`${t.file}:${t.line}:${t.title}`);
+      if (unique.size) $('n-playwright').dataset.count = unique.size;
+      countUp();
+      $('r-compliance').textContent = failed ? `${failed} failed` : `${t.passed || 0} of ${total} passed`;
+      $('r-compliance').className = `report-result ${failed ? 'fail' : 'pass'}`;
+    }
+
+    function countUp() {
+      document.querySelectorAll('[data-count]').forEach((el) => {
+        const to = Number(el.dataset.count);
+        if (reduced) { el.textContent = to; return; }
+        const start = performance.now();
+        const step = (t) => {
+          const k = Math.min(1, (t - start) / 1100);
+          el.textContent = Math.round(to * (1 - Math.pow(1 - k, 4)));
+          if (k < 1) requestAnimationFrame(step);
+        };
+        requestAnimationFrame(step);
+      });
+    }
+
+    async function loadPostman() {
+      for (const [id, file] of [['r-api', 'api/api.xml'], ['r-security', 'api/malicious-input.xml']]) {
+        try {
+          const res = await fetch(file);
+          if (!res.ok) throw new Error(res.status);
+          const doc = new DOMParser().parseFromString(await res.text(), 'application/xml');
+          const cases = doc.querySelectorAll('testcase').length;
+          const failed = doc.querySelectorAll('testcase failure, testcase error').length;
+          $(id).textContent = failed ? `${failed} of ${cases} failed` : `${cases} checks passed`;
+          $(id).className = `report-result ${failed ? 'fail' : 'pass'}`;
+        } catch {
+          $(id).textContent = 'not in this build';
+        }
+      }
+    }
+
+    // ================================================================ requirements explorer
+    const STATUS_LABEL = { passed: 'Passed', failed: 'Failed', 'not-run': 'Not run', 'no-tests': 'No tests (gap)' };
+    let activeFilter = 'all';
+
+    function renderRequirements() {
+      $('req-count').textContent = requirements.length;
+      const counts = {};
+      requirements.forEach((r) => { counts[r.status] = (counts[r.status] || 0) + 1; });
+      const filters = [['all', 'All', requirements.length], ...Object.keys(STATUS_LABEL).filter((k) => counts[k]).map((k) => [k, STATUS_LABEL[k], counts[k]])];
+      $('filters').innerHTML = evidence ? filters.map(([k, label, n]) => `<button type="button" class="filter" data-f="${k}" aria-pressed="${k === activeFilter}">${k === 'all' ? '' : `<span class="dot ${k}" aria-hidden="true"></span>`}${label}<b>${n}</b></button>`).join('') : '';
+
+      const cats = [];
+      for (const r of requirements) if (!cats.includes(r.category)) cats.push(r.category);
+      $('req-groups').innerHTML = cats.map((c) => `
+        <div class="cat" data-cat="${esc(c)}">
+          <h3>${esc(c)}</h3>
+          <div class="req-grid">
+            ${requirements.filter((r) => r.category === c).map((r) => {
+              const n = new Set(r.tests.map((t) => t.id)).size;
+              return `<button type="button" class="req-tile ${r.status || ''}" data-req="${r.id}" data-status="${r.status || ''}">
+                <span class="req-id">${r.id}</span>
+                <span class="req-t">${esc(r.title)}</span>
+                <span class="req-c">${esc(r.control)}</span>
+                <span class="req-meta">${r.status ? `<span class="st ${r.status}">${STATUS_LABEL[r.status]}</span>` : ''}<span>${evidence ? `${n} test${n === 1 ? '' : 's'}` : r.risk}</span><span>${esc(r.risk)}</span></span>
+              </button>`;
+            }).join('')}
+          </div>
+        </div>`).join('') || '<p class="empty-note">Requirements could not be loaded.</p>';
+      applyFilter();
+    }
+
+    function applyFilter() {
+      document.querySelectorAll('.filter').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.f === activeFilter)));
+      document.querySelectorAll('.req-tile').forEach((t) => { t.hidden = activeFilter !== 'all' && t.dataset.status !== activeFilter; });
+      document.querySelectorAll('.cat').forEach((c) => { c.hidden = !c.querySelector('.req-tile:not([hidden])'); });
+    }
+    $('filters').addEventListener('click', (e) => {
+      const b = e.target.closest('.filter');
+      if (b) { activeFilter = b.dataset.f; applyFilter(); }
+    });
+    $('req-groups').addEventListener('click', (e) => {
+      const t = e.target.closest('.req-tile');
+      if (t) openRequirement(t.dataset.req);
+    });
+
+    function testHref(t) {
+      if (t.file.startsWith('../.features-gen/')) {
+        const m = t.file.match(/features\/[\w-]+\.feature/);
+        return m ? `https://github.com/abravebean/Bank-automation-test-bench/blob/main/${m[0]}` : REPO;
+      }
+      return `${REPO}playwright/${t.file}#L${t.line}`;
+    }
+    function displayFile(t) {
+      const m = t.file.match(/features\/([\w-]+\.feature)/);
+      return m ? m[1] : `${t.file}:${t.line}`;
+    }
+
+    const PROJECT_LABEL = { unit: 'Unit · rules engine', bank: 'Ledgerline API and UI', api: 'Dashboard API', a11y: 'Accessibility', dashboard: 'Dashboard UI', chromium: 'Chromium', firefox: 'Firefox', webkit: 'WebKit', 'bdd-bank': 'BDD · transfers', 'bdd-login': 'BDD · sign-in', 'bdd-recorder': 'BDD · Recorder', recorded: 'Recorded tests' };
+    let lastFocus = null;
+    function openRequirement(id) {
+      const r = requirements.find((x) => x.id === id);
+      if (!r) return;
+      lastFocus = document.activeElement;
+      const byProject = new Map();
+      for (const t of r.tests) {
+        if (!byProject.has(t.project)) byProject.set(t.project, []);
+        byProject.get(t.project).push(t);
+      }
+      const icon = { passed: '✓', flaky: '✓', failed: '✗', skipped: '–' };
+      const sections = [...byProject].map(([project, tests]) => `
+        <h3>${esc(PROJECT_LABEL[project] || project)} · ${tests.length}</h3>
+        <ul class="t-list">${tests.map((t) => `
+          <li><div class="t-row">
+            <span class="o ${t.outcome}" aria-label="${t.outcome}">${icon[t.outcome] || '•'}</span>
+            <span>${esc(t.title.split(' › ').slice(-1)[0])}</span>
+            <span class="t-dur">${t.durationMs != null && t.outcome !== 'skipped' ? `${t.durationMs} ms` : ''}</span>
+            <span class="t-sub"><a href="${testHref(t)}">${esc(displayFile(t))}</a>${t.outcome === 'flaky' ? ' · passed on retry' : ''}${t.skipReason ? ` · ${esc(t.skipReason)}` : ''}</span>
+            ${t.steps && t.steps.length ? `<details><summary>${t.steps.length} step${t.steps.length === 1 ? '' : 's'}</summary><ol>${t.steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol></details>` : ''}
+            ${t.error ? `<details open><summary>Error</summary><ol><li>${esc(t.error)}</li></ol></details>` : ''}
+          </div></li>`).join('')}
+        </ul>`).join('');
+      $('drawer-body').innerHTML = `
+        <p class="kicker">${esc(r.id)} · ${esc(r.category)}</p>
+        <h2 id="drawer-title">${esc(r.title)}</h2>
+        <dl>
+          <dt>Control</dt><dd>${esc(r.control)}</dd>
+          <dt>Risk</dt><dd>${esc(r.risk)}${r.risk === 'P1' ? ' (release blocker)' : ''}</dd>
+          ${r.status ? `<dt>Status</dt><dd><span class="st ${r.status}">${STATUS_LABEL[r.status]}</span></dd>` : ''}
+        </dl>
+        ${r.status === 'no-tests' ? `<div class="gap-box"><strong>Known gap.</strong> This requirement has no automated test yet. It’s listed on purpose: the report shows what isn’t covered as clearly as what is, and the test plan records it as out of scope for now.</div>` : ''}
+        ${r.status === 'not-run' ? `<div class="gap-box">These tests exist but were skipped in this run, usually because they need an external demo bank's credentials (CI secrets).</div>` : ''}
+        ${evidence ? sections : '<p class="empty-note">Test results appear after the next CI run.</p>'}`;
+      $('drawer').showModal();
+      $('drawer-close').focus();
+    }
+    $('drawer-close').addEventListener('click', () => $('drawer').close());
+    $('drawer').addEventListener('click', (e) => { if (e.target === $('drawer')) $('drawer').close(); });
+    $('drawer').addEventListener('close', () => { if (lastFocus) lastFocus.focus(); });
+
+    // ================================================================ test layers
+    const LAYERS = [
+      { id: 'unit', name: 'Unit', color: '#2b6a49', match: (t) => t.file.startsWith('unit/'),
+        what: 'The bank’s rules engine tested directly, with no browser and no HTTP: amount parsing, limits, lockout with an injected clock, and a 500-transfer fuzz test of the ledger. Also the Recorder’s clean-up logic and the report’s secret redaction.',
+        tools: ['Playwright Test', 'TypeScript'],
+        code: true },
+      { id: 'api', name: 'API & contracts', color: '#3c6e8f', match: (t) => t.file === 'bank/bank-api.spec.ts' || t.file === 'api/dashboard-api.spec.ts',
+        what: 'HTTP-level tests of the bank and the dashboard API: status codes, JSON Schema contracts, IDOR, idempotency and the 20-request race test. The Java suite covers the same API again with REST Assured.',
+        tools: ['Playwright request', 'Ajv JSON Schema', 'REST Assured (Java)'],
+        code: true },
+      { id: 'db', name: 'Database (SQL)', color: '#6b4f8a', match: (t) => t.file === 'api/run-history.spec.ts',
+        what: 'Every test run is saved to PostgreSQL. These tests compare what the API reports with direct SQL queries, check flaky-test detection, and confirm SQL injection in query parameters does nothing.',
+        tools: ['PostgreSQL', 'node-postgres', 'SQL'],
+        code: true },
+      { id: 'ui', name: 'UI end-to-end', color: '#8a5a2b', match: (t) => t.file === 'bank/bank-ui.spec.ts' || t.file.startsWith('specs/') || t.file.startsWith('dashboard/'),
+        what: 'Real browsers with Page Objects: transfers and receipts, double-clicking Transfer, the Back button after sign-out, a session cookie scripts can’t read, and the Recorder end to end. Runs on Chromium, Firefox and WebKit.',
+        tools: ['Playwright', 'Page Object Model', 'Selenium'],
+        code: true },
+      { id: 'bdd', name: 'BDD (Gherkin)', color: '#a3392a', match: (t) => t.file.includes('.features-gen'),
+        what: 'Business-readable scenarios a product owner can review, with Scenario Outlines for boundary tables. The same scenarios run as real Playwright tests, and the Java suite has its own Cucumber features.',
+        tools: ['Gherkin', 'playwright-bdd', 'Cucumber (Java)'],
+        code: true },
+      { id: 'a11y', name: 'Accessibility & perf', color: '#5f6b2e', match: (t) => t.file.startsWith('a11y/') || t.file === 'api/performance.spec.ts',
+        what: 'axe-core scans for WCAG 2.1 A/AA violations plus keyboard-only navigation, and p95 latency budgets for the API under sequential and concurrent load.',
+        tools: ['axe-core', 'WCAG 2.1 AA', 'p95 latency'],
+        code: true },
+    ];
+    const EXTERNAL = [
+      { id: 'java', name: 'Java suite', color: '#2f2a22', count: 45, ext: true,
+        what: 'A separate repository that tests the same Ledgerline API in Java 17, the stack most bank QA teams use: parameterized boundary tables, a 20-thread race test with a CountDownLatch, JSON Schema contracts, and Cucumber features. CI starts a fresh Ledgerline and runs it on every push and nightly.',
+        tools: ['Java 17', 'REST Assured', 'JUnit 5', 'Cucumber', 'Maven'],
+        code: true,
+        link: 'https://github.com/abravebean/ledgerline-api-tests' },
+      { id: 'postman', name: 'Postman checks', color: '#94501d', count: 60, unit: 'assertions', ext: true,
+        what: 'Chained requests against the dashboard API run with Newman in CI, plus a data-driven security collection: one CSV row per path-traversal, script, SQL or command-injection payload.',
+        tools: ['Postman', 'Newman', 'CSV data files'],
+        code: true },
+      { id: 'infra', name: 'Infrastructure', color: '#4d5560', count: 13, ext: true,
+        what: 'AWS CDK infrastructure as code (ECS Fargate and RDS) with tests on the generated CloudFormation: encryption on, no public database, least-privilege security groups, cost guards. Code only, not deployed.',
+        tools: ['AWS CDK', 'TypeScript', 'node:test'],
+        code: true },
+    ];
+
+    /** Tiny highlighter for the excerpts: strings, comments, keywords, annotations. */
+    function hl(code) {
+      const KW = /^(const|let|await|async|new|for|of|if|return|true|false|void|int|class|import|from|Scenario|Outline|When|Then|Given|And|Examples|SELECT|FROM|WHERE|FILTER|AS|COUNT|ROUND|AVG)$/;
+      return code.replace(/(\/\/[^\n]*|(?<=^|\n)#[^\n]*)|(`(?:\\.|[^`])*`|'(?:\\.|[^'])*'|"(?:\\.|[^"])*")|(@\w+)|([A-Za-z_]\w*)|([\s\S])/g, (m, c, str, ann, word, other) => {
+        if (c) return `<span class="c">${esc(c)}</span>`;
+        if (str) return `<span class="s">${esc(str)}</span>`;
+        if (ann) return `<span class="k">${esc(ann)}</span>`;
+        if (word) return KW.test(word) ? `<span class="k">${word}</span>` : word;
+        return esc(other);
+      });
+    }
+
+    function renderLayers() {
+      const all = new Map();
+      if (evidence) {
+        for (const r of evidence.requirements) for (const t of r.tests) all.set(t.id, t);
+        for (const t of evidence.untraced || []) all.set(t.id, t);
+      }
+      const fallback = { unit: 49, api: 33, db: 10, ui: 40, bdd: 19, a11y: 5 };
+      const layers = LAYERS.map((l) => ({ ...l, count: evidence ? [...all.values()].filter(l.match).length : fallback[l.id] }));
+      // tests not matched by a named layer go to UI (cross-browser login specs and the like)
+      if (evidence) {
+        const matched = layers.reduce((s, l) => s + l.count, 0);
+        layers.find((l) => l.id === 'ui').count += all.size - matched;
+      }
+      const items = [...layers, ...EXTERNAL].filter((l) => l.count > 0);
+      const seg = (l) => `<button type="button" data-l="${l.id}" style="background:${l.color};flex-grow:0" aria-pressed="false" aria-label="${esc(l.name)}: ${l.count} ${l.unit || 'tests'}" title="${esc(l.name)} · ${l.count}">${l.count >= 9 ? l.count : ''}</button>`;
+      $('stackbar').innerHTML = items.filter((l) => !l.ext).map(seg).join('');
+      $('stackbar-ext').innerHTML = items.filter((l) => l.ext).map(seg).join('');
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        items.forEach((l) => { document.querySelector(`.stackbar [data-l="${l.id}"]`).style.flexGrow = l.count; });
+      }));
+      $('layer-legend').innerHTML = items.map((l) => `<li><button type="button" data-l="${l.id}" aria-pressed="false"><span class="sw" style="background:${l.color}" aria-hidden="true"></span>${esc(l.name)}<span class="n">${l.count}</span></button></li>`).join('');
+      const select = (id) => {
+        const l = items.find((x) => x.id === id);
+        document.querySelectorAll('[data-l]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.l === id)));
+        $('layer-detail').innerHTML = `
+          <div class="ld-text">
+            <h3>${esc(l.name)}</h3>
+            <p class="count">${l.count} ${l.unit || 'tests'}${l.ext ? '' : ' in the latest run'}${l.link ? ` · <a href="${l.link}">repository</a>` : ''}</p>
+            <p>${esc(l.what)}</p>
+            <div class="tools">${l.tools.map((t) => `<span class="tag">${esc(t)}</span>`).join('')}</div>
+          </div>
+          <pre tabindex="0" aria-label="Excerpt from the ${esc(l.name)} tests"><code>${hl(document.querySelector(`[data-code="${l.id}"]`).textContent.trim())}</code></pre>`;
+      };
+      document.querySelectorAll('#stackbar, #stackbar-ext, #layer-legend').forEach((el) => el.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-l]');
+        if (b) select(b.dataset.l);
+      }));
+      select('unit');
+    }
+
+    // ================================================================ go
+    if (!Engine) {
+      $('attacks').innerHTML = '<li class="empty-note">The playground engine didn’t load. Reload the page to try again.</li>';
+    } else {
+      freshBank();
+      renderAccounts();
+      renderAttacks();
+    }
+    loadEvidence().then(() => {
+      renderStatus();
+      renderRequirements();
+      renderLayers();
+      if (location.hash === '#requirements' || location.hash === '#layers') document.querySelector(location.hash).scrollIntoView();
+    });
+    loadPostman();
+  })();
   </script>
 </body>
 </html>

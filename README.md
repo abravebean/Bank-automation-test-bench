@@ -15,7 +15,7 @@
 
 A QA automation portfolio project: **Ledgerline**, a fictional demo bank with accounts and transfers, tested at every layer (UI, API, database, security, accessibility, performance), with audit-ready compliance evidence generated on every commit.
 
-**[▶ Live test results](https://abravebean.github.io/Bank-automation-test-bench/)**: rebuilt by CI on every push to `main`.
+**[▶ Try to break Ledgerline](https://abravebean.github.io/Bank-automation-test-bench/)**: the live site, rebuilt by CI on every push to `main`. Attack the bank in your browser (overdrafts, IDOR, double-clicks, a 20-request race, password guessing) and see the test that blocks each one, then explore every requirement and its latest results. The playground runs Ledgerline's real rules engine, bundled for the browser, and the page has its own Playwright tests (`playwright/site/`).
 
 ![Dashboard running a test, then the Recorder turning clicks into code and moving secrets to .env](docs/demo.gif)
 
@@ -23,9 +23,9 @@ A QA automation portfolio project: **Ledgerline**, a fictional demo bank with ac
 
 | | |
 | --- | --- |
-| **Automated checks** | 139 Playwright tests (145 runs across Chromium, Firefox and WebKit), 60 Postman assertions, 13 infrastructure tests |
+| **Automated checks** | 153 Playwright tests (159 runs across Chromium, Firefox and WebKit), 60 Postman assertions, 13 infrastructure tests, plus 45 Java API tests in a [companion repo](https://github.com/abravebean/ledgerline-api-tests) |
 | **Test types** | UI end-to-end, BDD (Gherkin), REST API contracts, business rules (boundary values, equivalence partitions), SQL data integrity, ledger reconciliation, security (IDOR, lockout, injection, session cookies), race conditions, accessibility (WCAG 2.1 AA), performance (p95), infrastructure |
-| **Traceability** | 24 requirements, each mapped to a control (OWASP Top 10, WCAG, CWE) and linked to the tests that prove it |
+| **Traceability** | 25 requirements, each mapped to a control (OWASP Top 10, WCAG, CWE) and linked to the tests that prove it |
 | **CI/CD** | GitHub Actions, 6 jobs on every push: tests, Docker build, infrastructure checks, merged compliance report, publish to Pages |
 | **Stack** | TypeScript, JavaScript, Playwright, Selenium, Postman/Newman, PostgreSQL, Docker, AWS CDK |
 | **Java companion suite** | [ledgerline-api-tests](https://github.com/abravebean/ledgerline-api-tests): 45 API tests for Ledgerline in Java 17 with REST Assured, JUnit 5, Cucumber and Maven, run in CI against a fresh Ledgerline server |

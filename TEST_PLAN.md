@@ -42,6 +42,7 @@ Make sure that a customer can log in and out of the demo bank, that bad credenti
 | Recorded | New flows captured with Playwright Codegen, then reviewed and cleaned (secrets → env vars) | `npm run record` | Locally, then promoted to the suite |
 | Unit | Helper logic: Codegen clean-up, code → plain-English steps | Playwright Test | CI, every push |
 | Dashboard UI | Recorder page end to end, with a scripted stand-in for Codegen | Playwright Test, axe-core | CI, every push |
+| Public results page | The GitHub Pages site: every playground attack is blocked by the real bank engine, CI results render (passing, failing, missing via mocked responses), WCAG 2.1 AA in light and dark, no horizontal scroll on phones | Playwright Test, `page.route`, axe-core | CI, every push |
 | BDD | Business-readable scenarios for login and the Recorder (Scenario Outlines for data variations) | Gherkin, playwright-bdd | CI, every push |
 | API collections | Chained requests, data-driven security payloads from CSV | Postman, Newman | CI (dashboard and Docker container), after every AWS deploy |
 | Infrastructure | Security and cost rules in the generated CloudFormation | AWS CDK assertions, node:test | CI, every push; before every deploy |
@@ -99,6 +100,7 @@ The requirement catalog lives in [`compliance/requirements.json`](compliance/req
 | R22 | No double spending (idempotency, concurrency) | CWE-362 | `unit/demo-bank.spec.ts`, `bank/bank-api.spec.ts`, `bank/bank-ui.spec.ts` |
 | R23 | Secure session cookie; sign-out ends the session | CWE-1004, OWASP A07 | `bank/bank-api.spec.ts`, `bank/bank-ui.spec.ts` |
 | R24 | Bank pages meet WCAG 2.1 AA | WCAG 2.1 AA | `bank/bank-ui.spec.ts` |
+| R25 | Public results page shows the latest CI result; its playground enforces the bank rules | Functional, WCAG 2.1 AA | `site/live-site.spec.ts` |
 
 ## 6. Test data
 

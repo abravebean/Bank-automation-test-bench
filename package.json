@@ -20,11 +20,13 @@
     "test:recorded": "playwright test --project=recorded",
     "test:dashboard": "playwright test --project=dashboard",
     "typecheck": "tsc -p .",
-    "test:compliance": "bddgen && playwright test --project=unit --project=api --project=a11y --project=dashboard --project=bdd-recorder --project=bank --project=bdd-bank --project=chromium --project=bdd-login",
+    "test:compliance": "bddgen && playwright test --project=unit --project=api --project=a11y --project=dashboard --project=bdd-recorder --project=bank --project=bdd-bank --project=chromium --project=bdd-login --project=site",
     "test:postman": "node scripts/run-postman.js",
     "bddgen": "bddgen",
     "test:bdd": "bddgen && playwright test --project=bdd-login --project=bdd-recorder",
-    "test:bank": "bddgen && playwright test --project=bank --project=bdd-bank"
+    "test:bank": "bddgen && playwright test --project=bank --project=bdd-bank",
+    "site:build": "esbuild lib/demo-bank/bank.js --bundle --format=iife --global-name=LedgerlineEngine --alias:crypto=./site/src/crypto-shim.js --platform=browser --target=es2020 --outfile=site/dist/ledgerline-engine.js",
+    "site:preview": "npm run -s site:build && node scripts/serve-site.js"
   },
   "keywords": [
     "selenium",
@@ -70,6 +72,7 @@
     "@types/node": "^22.9.0",
     "@types/pg": "^8.11.10",
     "ajv": "^8.20.0",
+    "esbuild": "^0.23.1",
     "newman": "^6.2.1",
     "newman-reporter-htmlextra": "^1.23.1",
     "playwright-bdd": "^9.2.1",
