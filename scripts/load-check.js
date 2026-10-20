@@ -122,6 +122,10 @@ async function main() {
   if (failures.length) lines.push('', '**Broken budgets:**', ...failures.map((f) => `- ${f}`));
   console.log(lines.join('\n'));
   if (process.env.GITHUB_ACTIONS) for (const f of failures) console.log(`::error title=Load test budget::${f}`);
+  if (process.env.GITHUB_ACTIONS) {
+    const perLabel = rows.map((r) => `${r.label}: ${r.count} req, p95 ${r.p95} ms, p99 ${r.p99} ms, max ${r.max} ms`).join(' | ');
+    console.log(`::notice title=Load test results::${total} requests, ${users} users, ${rps.toFixed(1)} req/s, ${errorRate.toFixed(2)}% errors | ${perLabel}${money ? ` | ledger mismatches ${money.mismatches}, total ${money.totalAfter === money.expected ? 'conserved' : 'NOT conserved'}` : ''}`);
+  }
 
   const jsonOut = opt('json');
   if (jsonOut) {
