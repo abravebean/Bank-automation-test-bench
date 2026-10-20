@@ -10,6 +10,7 @@
 ![Postman](https://img.shields.io/badge/Postman-FF6C37?logo=postman&logoColor=white)
 ![Cucumber](https://img.shields.io/badge/BDD-Gherkin-23D96C?logo=cucumber&logoColor=white)
 ![AWS](https://img.shields.io/badge/AWS-CDK-232F3E?logo=amazonwebservices&logoColor=white)
+![Java](https://img.shields.io/badge/Java-REST_Assured-ED8B00?logo=openjdk&logoColor=white)
 ![Tests](https://github.com/abravebean/Bank-automation-test-bench/actions/workflows/playwright.yml/badge.svg)
 
 A QA automation portfolio project: **Ledgerline**, a fictional demo bank with accounts and transfers, tested at every layer (UI, API, database, security, accessibility, performance), with audit-ready compliance evidence generated on every commit.
@@ -27,6 +28,7 @@ A QA automation portfolio project: **Ledgerline**, a fictional demo bank with ac
 | **Traceability** | 24 requirements, each mapped to a control (OWASP Top 10, WCAG, CWE) and linked to the tests that prove it |
 | **CI/CD** | GitHub Actions, 6 jobs on every push: tests, Docker build, infrastructure checks, merged compliance report, publish to Pages |
 | **Stack** | TypeScript, JavaScript, Playwright, Selenium, Postman/Newman, PostgreSQL, Docker, AWS CDK |
+| **Java companion suite** | [ledgerline-api-tests](https://github.com/abravebean/ledgerline-api-tests): 45 API tests for Ledgerline in Java 17 with REST Assured, JUnit 5, Cucumber and Maven, run in CI against a fresh Ledgerline server |
 
 ## Where to look first
 
