@@ -406,7 +406,7 @@
           </div>
           <div class="counters" role="group" aria-label="Automated checks">
             <div><strong data-count="153" id="n-playwright">153</strong><span>Playwright tests (TypeScript)</span></div>
-            <div><strong data-count="45">45</strong><span>Java API tests</span></div>
+            <div><strong data-count="64">64</strong><span>Java tests (API + Selenium)</span></div>
             <div><strong data-count="60">60</strong><span>Postman assertions</span></div>
             <div><strong data-count="13">13</strong><span>infrastructure tests</span></div>
           </div>
@@ -589,10 +589,17 @@
             </a>
           </li>
           <li>
+            <a href="load/index.html">
+              <span class="report-name">Load test (JMeter)</span>
+              <span class="report-result" id="r-load">…</span>
+              <span class="report-desc" id="r-load-desc">25 virtual users for a minute: sign in, view accounts, transfer, view history. Budgets on p95 latency, errors and throughput, and a check that no money was created or lost.</span>
+            </a>
+          </li>
+          <li>
             <a href="https://github.com/abravebean/ledgerline-api-tests">
-              <span class="report-name">Java API suite</span>
+              <span class="report-name">Java suites (API + UI)</span>
               <span class="report-result">GitHub</span>
-              <span class="report-desc">45 tests for the Ledgerline API in Java 17 with REST Assured, JUnit 5, Cucumber and Maven, run on every push and nightly.</span>
+              <span class="report-desc">64 tests in Java 17: the API with REST Assured, JUnit 5 and Cucumber, and the UI with Selenium WebDriver and TestNG. Run on every push and nightly.</span>
             </a>
           </li>
           <li>
@@ -1342,6 +1349,22 @@ it('is PostgreSQL 16, encrypted, and not publicly accessible', () => {
       });
     }
 
+    async function loadLoadTest() {
+      try {
+        const res = await fetch('load/summary.json', { cache: 'no-store' });
+        if (!res.ok) throw new Error(res.status);
+        const sum = await res.json();
+        const transfer = (sum.labels || []).find((l) => l.label === 'Transfer $1.00');
+        $('r-load').textContent = sum.passed ? `passed · ${sum.rps} req/s` : `${sum.failures.length} budget${sum.failures.length === 1 ? '' : 's'} broken`;
+        $('r-load').className = `report-result ${sum.passed ? 'pass' : 'fail'}`;
+        $('r-load-desc').textContent = `${sum.users} virtual users, ${sum.requests.toLocaleString('en-US')} requests in ${sum.seconds} s, ${sum.errorRatePct}% errors` +
+          (transfer ? `, transfers p95 ${transfer.p95} ms` : '') +
+          (sum.money ? `. Money conserved: ${sum.money.mismatches === 0 && sum.money.totalAfter === sum.money.expected ? 'yes' : 'NO'}.` : '.');
+      } catch {
+        $('r-load').textContent = 'not in this build';
+      }
+    }
+
     async function loadPostman() {
       for (const [id, file] of [['r-api', 'api/api.xml'], ['r-security', 'api/malicious-input.xml']]) {
         try {
@@ -1480,14 +1503,14 @@ it('is PostgreSQL 16, encrypted, and not publicly accessible', () => {
         tools: ['Gherkin', 'playwright-bdd', 'Cucumber (Java)'],
         code: true },
       { id: 'a11y', name: 'Accessibility & perf', color: '#5f6b2e', match: (t) => t.file.startsWith('a11y/') || t.file === 'api/performance.spec.ts',
-        what: 'axe-core scans for WCAG 2.1 A/AA violations plus keyboard-only navigation, and p95 latency budgets for the API under sequential and concurrent load.',
-        tools: ['axe-core', 'WCAG 2.1 AA', 'p95 latency'],
+        what: 'axe-core scans for WCAG 2.1 A/AA violations plus keyboard-only navigation, and p95 latency budgets for the API. A separate JMeter load test runs 25 virtual users for a minute on every push and fails the build if latency, errors or throughput break their budgets, or if any money goes missing.',
+        tools: ['axe-core', 'WCAG 2.1 AA', 'Apache JMeter', 'p95 latency'],
         code: true },
     ];
     const EXTERNAL = [
-      { id: 'java', name: 'Java suite', color: '#2f2a22', count: 45, ext: true,
-        what: 'A separate repository that tests the same Ledgerline API in Java 17, the stack most bank QA teams use: parameterized boundary tables, a 20-thread race test with a CountDownLatch, JSON Schema contracts, and Cucumber features. CI starts a fresh Ledgerline and runs it on every push and nightly.',
-        tools: ['Java 17', 'REST Assured', 'JUnit 5', 'Cucumber', 'Maven'],
+      { id: 'java', name: 'Java suites', color: '#2f2a22', count: 64, ext: true,
+        what: 'A separate repository that tests Ledgerline in Java 17, the stack most bank QA teams use. The API suite (45) has parameterized boundary tables, a 20-thread race test with a CountDownLatch, JSON Schema contracts and Cucumber features. The UI suite (19) uses Selenium WebDriver and TestNG with Page Objects, explicit waits and four browsers in parallel. CI runs both on every push and nightly.',
+        tools: ['Java 17', 'REST Assured', 'JUnit 5', 'Cucumber', 'Selenium WebDriver', 'TestNG', 'Maven'],
         code: true,
         link: 'https://github.com/abravebean/ledgerline-api-tests' },
       { id: 'postman', name: 'Postman checks', color: '#94501d', count: 60, unit: 'assertions', ext: true,
@@ -1567,6 +1590,7 @@ it('is PostgreSQL 16, encrypted, and not publicly accessible', () => {
       if (location.hash === '#requirements' || location.hash === '#layers') document.querySelector(location.hash).scrollIntoView();
     });
     loadPostman();
+    loadLoadTest();
   })();
   </script>
 </body>

@@ -23,12 +23,12 @@ A QA automation portfolio project: **Ledgerline**, a fictional demo bank with ac
 
 | | |
 | --- | --- |
-| **Automated checks** | 153 Playwright tests (159 runs across Chromium, Firefox and WebKit), 60 Postman assertions, 13 infrastructure tests, plus 45 Java API tests in a [companion repo](https://github.com/abravebean/ledgerline-api-tests) |
+| **Automated checks** | 153 Playwright tests (159 runs across Chromium, Firefox and WebKit), 60 Postman assertions, 13 infrastructure tests, plus 64 Java tests (REST Assured and Selenium/TestNG) in a [companion repo](https://github.com/abravebean/ledgerline-api-tests), and a JMeter load test |
 | **Test types** | UI end-to-end, BDD (Gherkin), REST API contracts, business rules (boundary values, equivalence partitions), SQL data integrity, ledger reconciliation, security (IDOR, lockout, injection, session cookies), race conditions, accessibility (WCAG 2.1 AA), performance (p95), infrastructure |
 | **Traceability** | 25 requirements, each mapped to a control (OWASP Top 10, WCAG, CWE) and linked to the tests that prove it |
 | **CI/CD** | GitHub Actions, 6 jobs on every push: tests, Docker build, infrastructure checks, merged compliance report, publish to Pages |
-| **Stack** | TypeScript, JavaScript, Playwright, Selenium, Postman/Newman, PostgreSQL, Docker, AWS CDK |
-| **Java companion suite** | [ledgerline-api-tests](https://github.com/abravebean/ledgerline-api-tests): 45 API tests for Ledgerline in Java 17 with REST Assured, JUnit 5, Cucumber and Maven, run in CI against a fresh Ledgerline server |
+| **Stack** | TypeScript, JavaScript, Playwright, Selenium, Postman/Newman, Apache JMeter, PostgreSQL, Docker, AWS CDK |
+| **Java companion suites** | [ledgerline-api-tests](https://github.com/abravebean/ledgerline-api-tests): 64 tests in Java 17, the API with REST Assured, JUnit 5 and Cucumber (45), and the UI with Selenium WebDriver and TestNG (19), run in CI against a fresh Ledgerline server |
 
 ## Where to look first
 
@@ -322,6 +322,27 @@ DATABASE_URL=postgres://testbench:testbench@localhost:5432/testbench npm start
 ## Performance Tests
 
 `playwright/api/performance.spec.ts` sends 50 sequential and 20 concurrent requests to `GET /api/tests`, computes min/p50/p95/max, attaches the numbers to the HTML report, and fails the build if p95 goes over budget (default 300 ms, 3× that under concurrency). Override with `PERF_P95_BUDGET_MS`.
+
+### Load test (Apache JMeter)
+
+[`performance/ledgerline-load.jmx`](performance/ledgerline-load.jmx) is a JMeter test plan for the Ledgerline API. Each virtual user opens its own customer, signs in once (a Cookie Manager keeps each user's session), then loops: view accounts → transfer $1.00 with a fresh `Idempotency-Key` → view history, with 200–400 ms of think time. Assertions check every status code, and a JSON Extractor passes the new customer's credentials and account IDs from one request to the next.
+
+CI runs it on every push (the **Load test (JMeter)** job): 25 users, 20 s ramp-up, 60 s at full load, against a fresh server. JMeter doesn't fail a build on slow responses, so [`scripts/load-check.js`](scripts/load-check.js) reads the results file and enforces the budgets in [`performance/thresholds.json`](performance/thresholds.json):
+
+- p95 latency per request type (300 ms, 400 ms for transfers)
+- error rate ≤ 1% and a minimum throughput
+- **money conservation under load:** afterwards, every account still matches its ledger, and the bank's total grew by exactly the opening deposits of the customers the run created
+
+The JMeter HTML dashboard is published on the [live site](https://abravebean.github.io/Bank-automation-test-bench/load/), and the numbers go into the job summary. Run it yourself:
+
+```bash
+DEMO_BANK_TEST_HOOKS=true npm start          # in one terminal
+jmeter -n -t performance/ledgerline-load.jmx -Jusers=25 -Jrampup=20 -Jduration=60 \
+       -l load-results/results.jtl -e -o load-results/report
+node scripts/load-check.js load-results/results.jtl --base http://localhost:3000
+```
+
+Open `performance/ledgerline-load.jmx` in the JMeter GUI to see or edit the plan.
 
 ## Accessibility Tests
 

@@ -49,6 +49,11 @@ function evidence({ failing = [] as string[] } = {}) {
   };
 }
 
+const LOAD_SUMMARY = {
+  passed: true, requests: 12345, users: 25, seconds: 61, rps: 202.4, errorRatePct: 0,
+  labels: [{ label: 'Transfer $1.00', count: 4000, errors: 0, p50: 4, p95: 9, p99: 15, max: 40, budget: 400, ok: true }],
+  money: { mismatches: 0, totalAfter: 500, expected: 500, created: 25 }, failures: [],
+};
 const JUNIT = '<testsuites><testsuite><testcase name="a"/><testcase name="b"/></testsuite></testsuites>';
 
 async function mockResults(page: Page, body: object | null) {
@@ -56,6 +61,7 @@ async function mockResults(page: Page, body: object | null) {
     body ? route.fulfill({ json: body }) : route.fulfill({ status: 404, body: 'Not found' })
   );
   await page.route('**/api/*.xml', (route) => route.fulfill({ contentType: 'application/xml', body: JUNIT }));
+  await page.route('**/load/summary.json', (route) => route.fulfill({ json: LOAD_SUMMARY }));
   await page.route(/fonts\.(googleapis|gstatic)\.com/, (route) => route.abort());
 }
 
@@ -147,6 +153,8 @@ test.describe('Live results page', { tag: '@R25' }, () => {
     await expect(page.locator('#reqlegend')).toContainText(`${catalog.requirements.length - 1} passed`);
     await expect(page.locator('#reqlegend')).toContainText('1 no tests yet');
     await expect(page.locator('#r-api')).toHaveText('2 checks passed');
+    await expect(page.locator('#r-load')).toHaveText('passed · 202.4 req/s');
+    await expect(page.locator('#r-load-desc')).toContainText('transfers p95 9 ms. Money conserved: yes.');
   });
 
   test('a failing requirement turns the verdict red and is listed as failed', async ({ page }) => {

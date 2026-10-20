@@ -38,6 +38,8 @@ Make sure that a customer can log in and out of the demo bank, that bad credenti
 | API | Status codes, JSON Schema contracts, negative and security inputs, NDJSON stream | Playwright `request`, Ajv | CI, every push |
 | Data integrity | API responses compared to direct SQL queries against PostgreSQL | `pg`, SQL | CI with a Postgres service container |
 | Performance | p50 / p95 latency, sequential and concurrent | Playwright `request` | CI, every push |
+| Load | 25 virtual users for 60 s on the Ledgerline API (sign in, accounts, transfers, history); budgets on p95, error rate and throughput; money conservation afterwards | Apache JMeter, `scripts/load-check.js` | CI, every push |
+| UI (Java) | Sign-in, transfers, boundaries, session security in a real browser, run in parallel | Selenium WebDriver, TestNG ([ledgerline-api-tests](https://github.com/abravebean/ledgerline-api-tests)) | CI, every push and nightly |
 | Accessibility | axe-core WCAG 2.1 A/AA scan, keyboard-only navigation | `@axe-core/playwright` | CI, every push |
 | Recorded | New flows captured with Playwright Codegen, then reviewed and cleaned (secrets → env vars) | `npm run record` | Locally, then promoted to the suite |
 | Unit | Helper logic: Codegen clean-up, code → plain-English steps | Playwright Test | CI, every push |
@@ -66,7 +68,8 @@ The same login scenarios exist in both Selenium and Playwright so the two framew
 | Injection through API input (path, script, SQL) | High | Medium | **P1** | `dashboard-api.spec.ts`, `run-history.spec.ts` |
 | Run history disagrees with what actually ran | Medium | Medium | **P2** | `run-history.spec.ts` |
 | API response shape changes and breaks the dashboard | Medium | Medium | **P2** | JSON Schema contract tests |
-| API slows down | Medium | Low | **P2** | `performance.spec.ts` |
+| API slows down | Medium | Low | **P2** | `performance.spec.ts`, JMeter load test |
+| Bank slows down or loses money under many simultaneous customers | High | Low | **P1** | JMeter load test (`performance/`) with money-conservation check |
 | Dashboard unusable with a keyboard or screen reader | Medium | Medium | **P2** | `dashboard-a11y.spec.ts` |
 | A browser engine behaves differently | Medium | Low | **P3** | Cross-browser Playwright projects |
 
@@ -125,7 +128,7 @@ The requirement catalog lives in [`compliance/requirements.json`](compliance/req
 - The compliance report shows no **Failed** requirements, and every P1 requirement is **Passed** (not just "Not run")
 - 100% of P1 tests pass on all three browsers
 - No open WCAG 2.1 A/AA violations
-- API p95 within budget
+- API p95 within budget, and the JMeter load test within its budgets with money conserved
 - Any failure has a trace, screenshot and video attached in the CI report and a root cause logged
 
 ## 9. Defect handling
